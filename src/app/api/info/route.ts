@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       dumpSingleJson: true,
       noWarnings: true,
       callHome: false,
-      noCheckCertificate: true,
+      noCheckCertificates: true,
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       noPlaylist: true,

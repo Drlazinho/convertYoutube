@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ConvertTube - Conversor YouTube para MP3 em Alta Qualidade</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fff1f2',
+              500: '#ff0033',
+              600: '#e6002e',
+              700: '#cc0029',
+              glow: 'rgba(255, 0, 51, 0.25)'
+            },
+            surface: {
+              base: '#0B0B0E',
+              card: '#121318',
+              cardHover: '#181920',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderHover: 'rgba(255, 255, 255, 0.16)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Core Styles -->
+<style data-purpose="custom-layout">
+    body {
+      background-color: #08080a;
+      background-image: 
+        radial-gradient(at 50% 0%, rgba(255, 0, 51, 0.07) 0px, transparent 65%),
+        radial-gradient(at 100% 100%, rgba(255, 0, 51, 0.03) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+  </style>
+<style data-purpose="animations-and-effects">
+    .glow-hover:hover {
+      box-shadow: 0 0 25px -4px rgba(255, 0, 51, 0.45);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="font-sans text-neutral-200 antialiased min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+<!-- BEGIN: MainHeader -->
+<header class="sticky top-0 z-50 backdrop-blur-xl bg-[#08080a]/80 border-b border-white/[0.06] transition-all" data-purpose="site-header">
+<div class="max-w-6xl mx-auto px-6 h-18 flex items-center justify-between py-3">
+<!-- Brand Logo -->
+<a class="flex items-center gap-2.5 group cursor-pointer" data-purpose="logo-wrapper" href="#">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-500 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-200">
+<i class="w-5 h-5 text-white stroke-[2.2]" data-lucide="video"></i>
+</div>
+<div class="flex items-baseline">
+<span class="text-xl font-extrabold tracking-tight text-white">Convert<span class="text-brand-500">Tube</span></span>
+</div>
+</a>
+<!-- Navigation Segmented Tabs (As seen in snapshot) -->
+<nav class="flex items-center bg-[#15161C] p-1 rounded-full border border-white/[0.08] shadow-inner" data-purpose="nav-tabs">
+<button class="px-6 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 bg-white/[0.12] text-white shadow-sm flex items-center gap-1.5" id="tab-converter-btn" onclick="switchTab('converter')">
+<i class="w-3.5 h-3.5 text-neutral-300" data-lucide="refresh-cw"></i>
+          Converter
+        </button>
+<button class="px-5 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all duration-200 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04] flex items-center gap-1.5" id="tab-history-btn" onclick="switchTab('history')">
+<i class="w-3.5 h-3.5" data-lucide="history"></i>
+          Histórico <span class="bg-white/[0.08] px-1.5 py-0.5 rounded-md text-[10px] text-neutral-300 font-bold ml-0.5">3</span>
+</button>
+</nav>
+<!-- System Status & Quick Actions -->
+<div class="flex items-center gap-3" data-purpose="header-utilities">
+<div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Ultra Engine v2.4</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center text-neutral-400 hover:text-white transition-colors" title="Ajuda e Suporte">
+<i class="w-4 h-4" data-lucide="help-circle"></i>
+</button>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 w-full pt-10 pb-16">
+<!-- BEGIN: ConversionHeroSection -->
+<section class="space-y-8" data-purpose="conversion-tool" id="section-converter">
+<!-- Headline & Subtitle -->
+<div class="text-center space-y-3 pt-3">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[11px] font-bold uppercase tracking-wider mb-1">
+<i class="w-3.5 h-3.5" data-lucide="sparkles"></i> 100% Gratuito &amp; Ilimitado
+        </div>
+<h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400">
+          YouTube para MP3
+        </h1>
+<p class="text-neutral-400 text-sm sm:text-base max-w-xl mx-auto font-normal leading-relaxed">
+          Baixe o áudio dos seus vídeos preferidos com a mais alta qualidade possível em segundos.
+        </p>
+</div>
+<!-- Main Input Panel Card -->
+<div class="relative bg-surface-card/90 backdrop-blur-md rounded-2xl p-3 sm:p-5 border border-surface-border shadow-2xl transition-all hover:border-surface-borderHover" data-purpose="converter-form-container">
+<form class="space-y-4" id="convert-form" onsubmit="event.preventDefault(); triggerConversion();">
+<!-- URL Input Bar with integrated Paste Action -->
+<div class="relative flex items-center bg-[#090a0d] rounded-xl border border-white/[0.09] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500/50 transition-all p-1.5 shadow-inner">
+<div class="pl-3.5 text-neutral-400">
+<i class="w-5 h-5 text-neutral-400" data-lucide="link-2"></i>
+</div>
+<input class="w-full bg-transparent border-0 text-white placeholder-neutral-500 focus:ring-0 text-sm sm:text-base px-3 py-2 font-medium" id="youtube-url-input" placeholder="Cole o link do YouTube aqui..." required="" type="url" value="https://youtube.com/watch?v=kQDd1AhGIHk"/>
+<!-- Quick Action: Paste from Clipboard -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-neutral-300 hover:text-white transition-all border border-white/[0.05] mr-1" onclick="pasteClipboard()" title="Colar da área de transferência" type="button">
+<i class="w-3.5 h-3.5" data-lucide="clipboard"></i>
+<span>Colar</span>
+</button>
+</div>
+<!-- Controls Bar: Format Selector + Action Button -->
+<div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+<!-- Quality & Format Selector Pill -->
+<div class="w-full sm:w-64 relative" data-purpose="format-selector">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-400">
+<i class="w-4 h-4 text-brand-500" data-lucide="music"></i>
+</div>
+<select class="w-full pl-9 pr-8 py-3 bg-[#0A0B0F] border border-white/[0.09] rounded-xl text-xs sm:text-sm font-semibold text-neutral-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 cursor-pointer appearance-none transition-colors" id="audio-format-select">
+<option selected="" value="mp3-320">MP3 320 kbps (Melhor)</option>
+<option value="mp3-256">MP3 256 kbps (Padrão)</option>
+<option value="mp3-128">MP3 128 kbps (Compacto)</option>
+<option value="flac">FLAC Lossless (Audiófilo)</option>
+<option value="wav">WAV 48kHz (Não Comprimido)</option>
+<option value="mp4-1080">MP4 Vídeo 1080p Full HD</option>
+</select>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-400">
+<i class="w-4 h-4" data-lucide="chevron-down"></i>
+</div>
+</div>
+<!-- Primary Action Button: Converter Agora -->
+<button class="w-full sm:flex-1 py-3 px-6 bg-gradient-to-r from-brand-600 via-brand-500 to-rose-600 hover:from-brand-500 hover:to-rose-500 text-white font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 shadow-lg shadow-brand-500/25 glow-hover active:scale-[0.99] cursor-pointer" id="convert-submit-btn" type="submit">
+<i class="w-4 h-4 stroke-[2.4]" data-lucide="download"></i>
+<span>Converter Agora</span>
+</button>
+</div>
+<!-- Feature micro-badges -->
+<div class="flex flex-wrap items-center justify-center gap-6 pt-3 text-[11px] text-neutral-400 font-medium">
+<span class="flex items-center gap-1.5"><i class="w-3.5 h-3.5 text-amber-400" data-lucide="zap"></i> Renderização em 2s</span>
+<span class="flex items-center gap-1.5"><i class="w-3.5 h-3.5 text-emerald-400" data-lucide="shield-check"></i> Sem propagandas intrusivas</span>
+<span class="flex items-center gap-1.5"><i class="w-3.5 h-3.5 text-sky-400" data-lucide="sliders"></i> Tags ID3 automáticas inclusas</span>
+</div>
+</form>
+<!-- Progress Simulated Bar (Hidden by default, triggered on action) -->
+<div class="hidden mt-5 pt-4 border-t border-white/[0.08] space-y-2" id="conversion-progress-box">
+<div class="flex justify-between text-xs font-semibold">
+<span class="text-brand-500 flex items-center gap-2">
+<i class="w-3.5 h-3.5 animate-spin" data-lucide="loader-2"></i> Extraindo áudio de alta fidelidade...
+            </span>
+<span class="text-neutral-300" id="progress-percent">78%</span>
+</div>
+<div class="w-full h-2 bg-neutral-900 rounded-full overflow-hidden border border-white/[0.05]">
+<div class="h-full bg-gradient-to-r from-brand-600 to-rose-400 rounded-full transition-all duration-300" id="progress-fill-bar" style="width: 78%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: ConversionHeroSection -->
+<!-- BEGIN: RecentDownloadsSection -->
+<section class="mt-14 space-y-4" data-purpose="history-downloads-list">
+<!-- Section Header with Clear All -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-2.5">
+<h2 class="text-lg font-bold text-white tracking-tight">Downloads Recentes</h2>
+<span class="bg-white/[0.07] text-neutral-400 text-xs px-2 py-0.5 rounded-full font-medium">3 itens</span>
+</div>
+<button class="text-xs font-medium text-neutral-400 hover:text-rose-400 transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-rose-500/10" onclick="clearAllHistory()">
+<i class="w-3.5 h-3.5" data-lucide="trash-2"></i>
+          Limpar Tudo
+        </button>
+</div>
+<!-- History Cards Container -->
+<div class="space-y-3" id="downloads-history-list">
+<!-- PRIMARY CARD: The Weeknd ft. Dua Lipa (Direct Reproduction of Image Snapshot) -->
+<article class="group bg-surface-card hover:bg-surface-cardHover rounded-xl p-3 sm:p-3.5 border border-surface-border hover:border-surface-borderHover transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm" data-purpose="history-card-item">
+<div class="flex items-center gap-3.5 w-full sm:w-auto">
+<!-- Video Thumbnail with Time overlay and Vevo tag -->
+<div class="relative w-28 h-16 sm:w-32 sm:h-18 flex-shrink-0 rounded-lg overflow-hidden bg-neutral-900 border border-white/[0.08] shadow-sm">
+<img alt="The Weeknd ft. Dua Lipa - Don’t Close The Door" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApjkXK-qPuQB5rQ39ZZaVXgJPDzX_-NmEmzMG3toRICFCGJlgsamYRZ4mmzzNjxtn8Xl5OaVap7rw6VHg3Z4cPvXbueaC_da0KQiDBx27kSpnU2l_WdLK_G5icY5Ct6DuJjnlJe9jIKOmx6S4fppl_6_Kg5imY_4yVR5a8PsAJ1iXEJiGszqPFRvK7CuqEaUzSIpsfL_n5BPr3BOev4fqz7zlB-bhmkFyraE0O9gl-KrFXl-N-yQ-j"/>
+<!-- VEVO brand overlay tag -->
+<span class="absolute bottom-1.5 left-1.5 text-[9px] font-black uppercase text-white/90 tracking-tighter bg-black/50 px-1 py-0.2 rounded backdrop-blur-xs">vevo</span>
+<!-- Duration Badge -->
+<span class="absolute bottom-1.5 right-1.5 bg-black/85 text-neutral-200 text-[10px] font-semibold px-1.5 py-0.5 rounded backdrop-blur-sm">
+                04:05
+              </span>
+</div>
+<!-- Video Metadata -->
+<div class="min-w-0 flex-1">
+<h3 class="text-sm font-semibold text-white tracking-tight truncate pr-2 group-hover:text-brand-400 transition-colors">
+                The Weeknd ft. Dua Lipa - Don’t Close The Door (ft. Eilish Sounds)
+              </h3>
+<div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-neutral-400">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-brand-500/15 border border-brand-500/30 text-rose-300 text-[10px] font-bold uppercase tracking-wide">
+                  MP3 320kbps
+                </span>
+<span class="text-neutral-500">•</span>
+<span class="text-[11px] text-neutral-400">04/09/2026</span>
+<span class="text-neutral-500 hidden sm:inline">•</span>
+<span class="text-[11px] text-neutral-500 hidden sm:inline">9.4 MB</span>
+</div>
+</div>
+</div>
+<!-- Actions Toolbar -->
+<div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-white/[0.05]">
+<!-- Audio Preview Button -->
+<button class="w-8 h-8 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 hover:text-white flex items-center justify-center transition-colors text-xs" onclick="toggleAudioPreview(this)" title="Ouvir Prévia">
+<i class="w-3.5 h-3.5 ml-0.5" data-lucide="play"></i>
+</button>
+<!-- Re-download Button -->
+<a class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.07] hover:bg-white/[0.12] text-xs font-semibold text-neutral-200 hover:text-white border border-white/[0.08] transition-all" href="#download">
+<i class="w-3.5 h-3.5 text-brand-500" data-lucide="download"></i>
+<span>Baixar Novamente</span>
+</a>
+<!-- Delete Item Button -->
+<button class="w-8 h-8 rounded-lg bg-transparent hover:bg-rose-500/15 text-neutral-400 hover:text-rose-400 flex items-center justify-center transition-colors" onclick="removeHistoryCard(this)" title="Remover do histórico">
+<i class="w-3.5 h-3.5" data-lucide="trash"></i>
+</button>
+</div>
+</article>
+<!-- SECONDARY CARD: Synthwave / Lofi chill -->
+<article class="group bg-surface-card hover:bg-surface-cardHover rounded-xl p-3 sm:p-3.5 border border-surface-border hover:border-surface-borderHover transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm" data-purpose="history-card-item">
+<div class="flex items-center gap-3.5 w-full sm:w-auto">
+<div class="relative w-28 h-16 sm:w-32 sm:h-18 flex-shrink-0 rounded-lg overflow-hidden bg-neutral-900 border border-white/[0.08] shadow-sm">
+<img alt="Chill Lofi Beats - Midnight Study Session" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9AX1gLL3KkZkRIbaYNiDwCVR7iZZb1KboXkgHfcX9lBvtLpDo-WrcntjT-Qt_tNASJTjvA0bY2k1Gh5OEIzWS8XOsFa9hv_xxm1i7rMwzNmmHU0CZ1wgRM3FzFkBWaPRzaFa9hHgpS2fr-e3KNnUkKyMIk-VhDX0miX3f_EK3TC28b1CrHG84DnJWkgm_19MuUBvmHJzJ3sZMT8JrrvoGHaKguwsmnm6O06nV6Olz4l8b6S8o3YOS"/>
+<span class="absolute bottom-1.5 right-1.5 bg-black/85 text-neutral-200 text-[10px] font-semibold px-1.5 py-0.5 rounded backdrop-blur-sm">
+                12:40
+              </span>
+</div>
+<div class="min-w-0 flex-1">
+<h3 class="text-sm font-semibold text-white tracking-tight truncate pr-2 group-hover:text-brand-400 transition-colors">
+                Lofi Girl - Synthwave Radio / Beats to Chill and Code To
+              </h3>
+<div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-neutral-400">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-white/[0.08] border border-white/[0.1] text-neutral-300 text-[10px] font-bold uppercase tracking-wide">
+                  FLAC 24-bit
+                </span>
+<span class="text-neutral-500">•</span>
+<span class="text-[11px] text-neutral-400">03/09/2026</span>
+<span class="text-neutral-500 hidden sm:inline">•</span>
+<span class="text-[11px] text-neutral-500 hidden sm:inline">64.2 MB</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-white/[0.05]">
+<button class="w-8 h-8 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 hover:text-white flex items-center justify-center transition-colors text-xs" onclick="toggleAudioPreview(this)">
+<i class="w-3.5 h-3.5 ml-0.5" data-lucide="play"></i>
+</button>
+<a class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.07] hover:bg-white/[0.12] text-xs font-semibold text-neutral-200 hover:text-white border border-white/[0.08] transition-all" href="#download">
+<i class="w-3.5 h-3.5 text-brand-500" data-lucide="download"></i>
+<span>Baixar Novamente</span>
+</a>
+<button class="w-8 h-8 rounded-lg bg-transparent hover:bg-rose-500/15 text-neutral-400 hover:text-rose-400 flex items-center justify-center transition-colors" onclick="removeHistoryCard(this)">
+<i class="w-3.5 h-3.5" data-lucide="trash"></i>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- END: RecentDownloadsSection -->
+<!-- BEGIN: ValuePropositionsSection -->
+<section class="mt-20 pt-10 border-t border-white/[0.06]" data-purpose="features-grid">
+<div class="text-center max-w-md mx-auto mb-8">
+<h3 class="text-lg font-bold text-white">Por que escolher o ConvertTube?</h3>
+<p class="text-xs text-neutral-400 mt-1">Desenvolvido com tecnologia de processamento rápido para audiófilos e criadores.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<div class="bg-surface-card/60 backdrop-blur-sm p-5 rounded-xl border border-surface-border hover:border-surface-borderHover transition-all">
+<div class="w-10 h-10 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center mb-3.5 border border-brand-500/20">
+<i class="w-5 h-5" data-lucide="headphones"></i>
+</div>
+<h4 class="font-bold text-sm text-white mb-1.5">Qualidade Máxima de Áudio</h4>
+<p class="text-xs text-neutral-400 leading-relaxed">
+            Áudios masterizados com taxa de 320 kbps e amostragem em 48 kHz sem compressão secundária.
+          </p>
+</div>
+<div class="bg-surface-card/60 backdrop-blur-sm p-5 rounded-xl border border-surface-border hover:border-surface-borderHover transition-all">
+<div class="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center mb-3.5 border border-amber-500/20">
+<i class="w-5 h-5" data-lucide="gauge"></i>
+</div>
+<h4 class="font-bold text-sm text-white mb-1.5">Conversão Instantânea</h4>
+<p class="text-xs text-neutral-400 leading-relaxed">
+            Servidores em nuvem de alta capacidade para downloads em ultra velocidade sem filas demoradas.
+          </p>
+</div>
+<div class="bg-surface-card/60 backdrop-blur-sm p-5 rounded-xl border border-surface-border hover:border-surface-borderHover transition-all">
+<div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3.5 border border-emerald-500/20">
+<i class="w-5 h-5" data-lucide="shield"></i>
+</div>
+<h4 class="font-bold text-sm text-white mb-1.5">Privacidade Garantida</h4>
+<p class="text-xs text-neutral-400 leading-relaxed">
+            Seu histórico fica apenas no seu navegador. Não rastreamos ou armazenamos seus dados baixados.
+          </p>
+</div>
+</div>
+</section>
+<!-- END: ValuePropositionsSection -->
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: MainFooter -->
+<footer class="border-t border-white/[0.06] bg-[#070709] py-8 text-neutral-500 text-xs" data-purpose="site-footer">
+<div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded bg-brand-600 flex items-center justify-center text-white">
+<i class="w-3 h-3" data-lucide="video"></i>
+</div>
+<span class="text-neutral-300 font-semibold">ConvertTube</span>
+<span class="text-neutral-600">© 2026 • Todos os direitos reservados.</span>
+</div>
+<div class="flex items-center gap-6">
+<a class="hover:text-neutral-300 transition-colors" href="#">Termos de Uso</a>
+<a class="hover:text-neutral-300 transition-colors" href="#">Privacidade</a>
+<a class="hover:text-neutral-300 transition-colors" href="#">API para Desenvolvedores</a>
+<a class="hover:text-neutral-300 transition-colors" href="#">Status</a>
+</div>
+</div>
+</footer>
+<!-- END: MainFooter -->
+<!-- Scripts -->
+<script data-purpose="lucide-initialization">
+    lucide.createIcons();
+  </script>
+<script data-purpose="application-logic">
+    // Switch between 'Converter' and 'Histórico' tabs
+    function switchTab(tabName) {
+      const converterBtn = document.getElementById('tab-converter-btn');
+      const historyBtn = document.getElementById('tab-history-btn');
+      const converterSection = document.getElementById('section-converter');
+      const historySection = document.querySelector('[data-purpose="history-downloads-list"]');
+
+      if (tabName === 'history') {
+        historyBtn.className = "px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 bg-white/[0.12] text-white shadow-sm flex items-center gap-1.5";
+        converterBtn.className = "px-6 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all duration-200 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04] flex items-center gap-1.5";
+        
+        // Scroll smoothly to history
+        historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        converterBtn.className = "px-6 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 bg-white/[0.12] text-white shadow-sm flex items-center gap-1.5";
+        historyBtn.className = "px-5 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all duration-200 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04] flex items-center gap-1.5";
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    // Clipboard Paste Helper
+    async function pasteClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('youtube-url-input').value = text;
+        }
+      } catch (err) {
+        // Fallback prompt if permission is denied
+        const manual = prompt("Insira a URL do YouTube:");
+        if (manual) {
+          document.getElementById('youtube-url-input').value = manual;
+        }
+      }
+    }
+
+    // Simulate Conversion Animation
+    function triggerConversion() {
+      const progressBox = document.getElementById('conversion-progress-box');
+      const submitBtn = document.getElementById('convert-submit-btn');
+      const progressBar = document.getElementById('progress-fill-bar');
+      const progressPercent = document.getElementById('progress-percent');
+      
+      progressBox.classList.remove('hidden');
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-75');
+
+      let current = 0;
+      const interval = setInterval(() => {
+        current += 15;
+        if (current > 100) {
+          current = 100;
+          clearInterval(interval);
+          setTimeout(() => {
+            alert("Pronto! O arquivo MP3 de alta definição foi gerado com sucesso.");
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-75');
+            progressBox.classList.add('hidden');
+          }, 400);
+        }
+        progressBar.style.width = current + '%';
+        progressPercent.textContent = current + '%';
+      }, 150);
+    }
+
+    // Remove single card from history
+    function removeHistoryCard(button) {
+      const card = button.closest('article');
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.97)';
+        setTimeout(() => card.remove(), 200);
+      }
+    }
+
+    // Clear all history cards
+    function clearAllHistory() {
+      const list = document.getElementById('downloads-history-list');
+      if (confirm("Deseja realmente limpar todo o histórico recente?")) {
+        list.innerHTML = `
+          <div class="text-center py-10 border border-dashed border-white/[0.08] rounded-xl text-neutral-500 text-xs">
+            Nenhum download recente no momento.
+          </div>
+        `;
+      }
+    }
+
+    // Simple audio preview toggle state
+    function toggleAudioPreview(button) {
+      const isPlaying = button.getAttribute('data-playing') === 'true';
+      if (isPlaying) {
+        button.setAttribute('data-playing', 'false');
+        button.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>';
+      } else {
+        button.setAttribute('data-playing', 'true');
+        button.innerHTML = '<i data-lucide="pause" class="w-3.5 h-3.5 text-brand-500"></i>';
+      }
+      lucide.createIcons();
+    }
+  </script>
+</body></html>

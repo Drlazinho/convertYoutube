@@ -1,0 +1,21 @@
+{
+  "name": "YT to MP3 Converter",
+  "short_name": "YT-MP3",
+  "description": "Download and convert YouTube videos to high-quality MP3",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F17",
+  "theme_color": "#0B0F17",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

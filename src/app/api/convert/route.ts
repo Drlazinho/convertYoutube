@@ -43,7 +43,7 @@ async function processJob(jobId: string, url: string, quality: string) {
     const info = await youtubedl(url, {
       dumpSingleJson: true,
       noWarnings: true,
-      noCallHome: true,
+      callHome: false,
       noCheckCertificate: true,
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
@@ -70,7 +70,7 @@ async function processJob(jobId: string, url: string, quality: string) {
       output: tmpFile,
       ffmpegLocation: ffmpegPath,
       noWarnings: true,
-      noCallHome: true,
+      callHome: false,
       noCheckCertificate: true,
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,

@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { create } from 'youtube-dl-exec';
-import os from 'os';
-import path from 'path';
+import youtubedl from 'youtube-dl-exec';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { jobs } from '@/lib/jobStore';
 import crypto from 'crypto';
 
-const isWin = os.platform() === 'win32';
-const ytdlpPath = path.resolve(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', isWin ? 'yt-dlp.exe' : 'yt-dlp');
-const ffmpegPath = path.resolve(process.cwd(), 'node_modules', 'ffmpeg-static', isWin ? 'ffmpeg.exe' : 'ffmpeg');
-const youtubedl = create(ytdlpPath);
+const ffmpegPath = require('ffmpeg-static');
 
 export async function POST(request: NextRequest) {
   try {

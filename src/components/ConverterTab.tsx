@@ -29,7 +29,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
           setStatus({ type: 'idle', message: '' }); 
         } else {
           setPreview(null);
-          setStatus({ type: 'error', message: 'Vídeo não encontrado ou link inválido.' });
+          setStatus({ type: 'error', message: data.error || 'Vídeo não encontrado ou link inválido.' });
         }
       } catch (e) {
         console.error(e);

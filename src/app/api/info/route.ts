@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { create } from 'youtube-dl-exec';
-import path from 'path';
-import os from 'os';
-
-const binaryName = os.platform() === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
-const ytdlpPath = path.resolve(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', binaryName);
-const youtubedl = create(ytdlpPath);
+import youtubedl from 'youtube-dl-exec';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

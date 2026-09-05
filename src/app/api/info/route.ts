@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       noPlaylist: true,
+      extractorArgs: 'youtube:player_client=android,web',
     }) as any;
 
     // Convert seconds to MM:SS format for duration

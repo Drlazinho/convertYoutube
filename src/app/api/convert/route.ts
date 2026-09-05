@@ -43,6 +43,7 @@ async function processJob(jobId: string, url: string, quality: string) {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       noPlaylist: true,
+      extractorArgs: 'youtube:player_client=android,web',
     }) as any;
 
     const title = info.title;
@@ -70,6 +71,7 @@ async function processJob(jobId: string, url: string, quality: string) {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       noPlaylist: true,
+      extractorArgs: 'youtube:player_client=android,web',
     });
 
     // Parse progress from stdout

@@ -5,12 +5,13 @@ import { Header } from './Header';
 import { ConverterTab } from './ConverterTab';
 import { HistoryTab } from './HistoryTab';
 import { SettingsTab } from './SettingsTab';
+import { AboutTab } from './AboutTab';
 import { useHistory } from '@/hooks/useHistory';
 import { usePlayer } from '@/hooks/usePlayer';
-import { Headphones, Gauge, Shield, Video, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Headphones, Gauge, Shield, Video, Play, Pause, SkipBack, SkipForward, Code, Briefcase, MessageCircle } from 'lucide-react';
 
 export function MainApp() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings' | 'about'>('converter');
   const historyManager = useHistory();
   const playerManager = usePlayer(historyManager.history);
 
@@ -41,6 +42,10 @@ export function MainApp() {
         
         <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
           <SettingsTab />
+        </div>
+
+        <div style={{ display: activeTab === 'about' ? 'block' : 'none' }}>
+          <AboutTab />
         </div>
         
         {/* Value Propositions Section */}
@@ -94,12 +99,18 @@ export function MainApp() {
               <Video className="w-3 h-3" />
             </div>
             <span className="text-neutral-300 font-semibold">ConvertTube</span>
-            <span className="text-neutral-600">© 2026 • Todos os direitos reservados.</span>
+            <span className="text-neutral-600">© 2026 • Desenvolvido por Lázaro Bonfim.</span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-neutral-300 transition-colors">Termos de Uso</a>
-            <a href="#" className="hover:text-neutral-300 transition-colors">Privacidade</a>
-            <a href="#" className="hover:text-neutral-300 transition-colors">Status</a>
+            <a href="https://github.com/Drlazinho" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
+              <Code className="w-3.5 h-3.5" /> GitHub
+            </a>
+            <a href="https://linkedin.com/in/lazarobonfim" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
+              <Briefcase className="w-3.5 h-3.5" /> LinkedIn
+            </a>
+            <a href="https://wa.me/5571992938275" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
+              <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+            </a>
           </div>
         </div>
       </footer>

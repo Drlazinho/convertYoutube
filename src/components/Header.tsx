@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Video, RefreshCw, History, HelpCircle, Settings } from 'lucide-react';
+import { Download, Video, RefreshCw, History, HelpCircle, Settings, Info } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'converter' | 'history' | 'settings';
-  setActiveTab: (tab: 'converter' | 'history' | 'settings') => void;
+  activeTab: 'converter' | 'history' | 'settings' | 'about';
+  setActiveTab: (tab: 'converter' | 'history' | 'settings' | 'about') => void;
   historyCount: number;
 }
 
@@ -51,17 +51,17 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
           </div>
         </div>
 
-        {/* Navigation Segmented Tabs */}
-        <nav className="flex items-center bg-[#15161C] p-1 rounded-full border border-white/[0.08] shadow-inner w-full md:w-auto overflow-x-auto">
+        {/* Global Navigation */}
+        <nav className="flex items-center p-1 bg-black/40 rounded-full border border-white/[0.04] shadow-inner max-w-full overflow-x-auto no-scrollbar">
           <button 
             onClick={() => setActiveTab('converter')}
-            className={`flex-none px-6 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === 'converter' 
                 ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
                 : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
             }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${activeTab === 'converter' ? 'text-neutral-300' : ''}`} />
+            <RefreshCw className="w-3.5 h-3.5" />
             Converter
           </button>
           
@@ -91,6 +91,18 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
             <Settings className="w-3.5 h-3.5" />
             Configurações
           </button>
+
+          <button 
+            onClick={() => setActiveTab('about')}
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              activeTab === 'about' 
+                ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
+                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Info className="w-3.5 h-3.5" />
+            Sobre
+          </button>
         </nav>
 
         {/* System Status & Quick Actions */}
@@ -106,16 +118,9 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
           ) : (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Ultra Engine v2.4</span>
+              <span>v1.0</span>
             </div>
           )}
-          
-          <button 
-            className="w-9 h-9 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center text-neutral-400 hover:text-white transition-colors" 
-            title="Ajuda e Suporte"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
         </div>
         
       </div>

@@ -7,4 +7,5 @@ export interface HistoryItem {
   format: string;
   duration?: string;
   filePath?: string;
+  mediaType?: 'audio' | 'video';
 }

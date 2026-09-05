@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electron', {
   getInfo: (url) => ipcRenderer.invoke('get-info', url),
   openPreviewWindow: (url) => ipcRenderer.invoke('open-preview-window', url),
+  showInFolder: (filePath) => ipcRenderer.invoke('show-in-folder', filePath),
   getStreamUrl: (url) => ipcRenderer.invoke('get-stream-url', url),
   convert: (options) => ipcRenderer.invoke('start-conversion', options),
   searchYoutube: (query) => ipcRenderer.invoke('search-youtube', query),

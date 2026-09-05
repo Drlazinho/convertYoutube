@@ -4,6 +4,7 @@ import { useHistory } from '@/hooks/useHistory';
 
 export function ConverterTab({ historyManager }: { historyManager: ReturnType<typeof useHistory> }) {
   const [query, setQuery] = useState('');
+  const [mediaType, setMediaType] = useState<'audio' | 'video'>('audio');
   const [quality, setQuality] = useState('mp3-320');
   const [status, setStatus] = useState<{ type: 'idle' | 'starting' | 'downloading' | 'processing' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
   const [preview, setPreview] = useState<any>(null);
@@ -118,7 +119,8 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       const response = await (window as any).electron.convert({ 
         url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`, 
         title: videoInfo.title,
-        quality: quality.includes('320') ? '320' : '192' 
+        quality: mediaType === 'video' ? quality : (quality.includes('320') ? '320' : '192'),
+        type: mediaType
       });
 
       if (!response.success) {
@@ -139,7 +141,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         if (data.status === 'starting') {
            setStatus({ type: 'starting', message: 'Conectando ao YouTube...' });
         } else if (data.status === 'downloading') {
-           setStatus({ type: 'downloading', message: `Extraindo áudio de alta fidelidade...` });
+           setStatus({ type: 'downloading', message: mediaType === 'video' ? `Baixando vídeo e áudio...` : `Extraindo áudio de alta fidelidade...` });
         } else if (data.status === 'processing') {
            setStatus({ type: 'processing', message: 'Convertendo para formato final...' });
         } else if (data.status === 'done') {
@@ -152,9 +154,10 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
             thumbnail: videoInfo.thumbnail,
             url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`,
             timestamp: Date.now(),
-            format: `MP3 ${quality.includes('320') ? '320' : '192'}kbps`,
+            format: mediaType === 'video' ? `MP4 ${quality}p` : `MP3 ${quality.includes('320') ? '320' : '192'}kbps`,
             duration: videoInfo.duration,
-            filePath: data.filePath
+            filePath: data.filePath,
+            mediaType: mediaType
           });
         }
       });
@@ -220,22 +223,73 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
           </button>
         </div>
 
-        {/* Quality Selector */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Qualidade:</span>
-          <div className="flex bg-[#0b0b0e] p-1 rounded-lg border border-white/[0.06]">
-            <button 
-              onClick={() => setQuality('mp3-320')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-320' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
-            >
-              MP3 320kbps (Alta)
-            </button>
-            <button 
-              onClick={() => setQuality('mp3-192')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-192' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
-            >
-              MP3 192kbps (Normal)
-            </button>
+        {/* Type & Quality Selector */}
+        <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Formato:</span>
+            <div className="flex bg-[#0b0b0e] p-1 rounded-lg border border-white/[0.06]">
+              <button 
+                onClick={() => { setMediaType('audio'); setQuality('mp3-320'); }}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${mediaType === 'audio' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+              >
+                Áudio (MP3)
+              </button>
+              <button 
+                onClick={() => { setMediaType('video'); setQuality('1080'); }}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${mediaType === 'video' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+              >
+                Vídeo (MP4)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Qualidade:</span>
+            <div className="flex bg-[#0b0b0e] p-1 rounded-lg border border-white/[0.06]">
+              {mediaType === 'audio' ? (
+                <>
+                  <button 
+                    onClick={() => setQuality('mp3-320')}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-320' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  >
+                    320kbps
+                  </button>
+                  <button 
+                    onClick={() => setQuality('mp3-192')}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-192' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  >
+                    192kbps
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => setQuality('1080')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '1080' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  >
+                    1080p
+                  </button>
+                  <button 
+                    onClick={() => setQuality('720')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '720' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  >
+                    720p
+                  </button>
+                  <button 
+                    onClick={() => setQuality('480')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '480' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  >
+                    480p
+                  </button>
+                  <button 
+                    onClick={() => setQuality('360')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '360' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  >
+                    360p
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -377,7 +431,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
               className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto mt-auto"
             >
               <Download className="w-4 h-4" />
-              Iniciar Conversão ({quality.includes('320') ? '320kbps' : '192kbps'})
+              Iniciar Conversão ({mediaType === 'video' ? `${quality}p` : quality.includes('320') ? '320kbps' : '192kbps'})
             </button>
           </div>
         </div>

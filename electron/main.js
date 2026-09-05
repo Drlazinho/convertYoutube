@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session, shell } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -243,20 +243,30 @@ ipcMain.handle('open-preview-window', (event, url) => {
   return { success: true };
 });
 
-ipcMain.handle('start-conversion', async (event, { url, quality, title }) => {
+ipcMain.handle('show-in-folder', async (event, filePath) => {
+  if (fs.existsSync(filePath)) {
+    shell.showItemInFolder(filePath);
+    return { success: true };
+  }
+  return { success: false, error: 'Arquivo não encontrado' };
+});
+
+ipcMain.handle('start-conversion', async (event, { url, quality, title, type = 'audio' }) => {
   const jobId = crypto.randomUUID();
-  const safeTitle = (title || 'audio_youtube').replace(/[<>:"\/\\|?*\x00-\x1F]/g, '').trim();
+  const safeTitle = (title || 'youtube_download').replace(/[<>:"\/\\|?*\x00-\x1F]/g, '').trim();
   
+  const isVideo = type === 'video';
+  const ext = isVideo ? 'mp4' : 'mp3';
   const config = readConfig();
   let finalPath = '';
   
   if (config.autoSave && config.defaultDirectory) {
-    finalPath = path.join(config.defaultDirectory, `${safeTitle}.mp3`);
+    finalPath = path.join(config.defaultDirectory, `${safeTitle}.${ext}`);
   } else {
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-      title: 'Salvar Áudio',
-      defaultPath: path.join(config.defaultDirectory || app.getPath('downloads'), `${safeTitle}.mp3`),
-      filters: [{ name: 'Audio MP3', extensions: ['mp3'] }]
+      title: isVideo ? 'Salvar Vídeo' : 'Salvar Áudio',
+      defaultPath: path.join(config.defaultDirectory || app.getPath('downloads'), `${safeTitle}.${ext}`),
+      filters: isVideo ? [{ name: 'Vídeo MP4', extensions: ['mp4'] }] : [{ name: 'Áudio MP3', extensions: ['mp3'] }]
     });
 
     if (canceled || !filePath) {
@@ -265,7 +275,7 @@ ipcMain.handle('start-conversion', async (event, { url, quality, title }) => {
     finalPath = filePath;
   }
 
-  processJob(jobId, url, quality, finalPath).catch(err => {
+  processJob(jobId, url, quality, finalPath, type).catch(err => {
     console.error('Job background error:', err);
     mainWindow.webContents.send(`progress-${jobId}`, { status: 'error', error: err.message });
   });
@@ -273,29 +283,13 @@ ipcMain.handle('start-conversion', async (event, { url, quality, title }) => {
   return { success: true, jobId };
 });
 
-async function processJob(jobId, url, quality, finalPath) {
+async function processJob(jobId, url, quality, finalPath, type) {
   try {
     mainWindow.webContents.send(`progress-${jobId}`, { status: 'starting' });
 
-    const info = await youtubedl(url, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      callHome: false,
-      noCheckCertificates: true,
-      preferFreeFormats: true,
-      youtubeSkipDashManifest: true,
-      noPlaylist: true,
-      extractorArgs: 'youtube:player_client=android,web',
-    });
-
-    const bitrate = quality === '192' ? '192' : '320';
-    
     mainWindow.webContents.send(`progress-${jobId}`, { status: 'downloading', percent: 0 });
 
-    const subprocess = youtubedl.exec(url, {
-      extractAudio: true,
-      audioFormat: 'mp3',
-      audioQuality: bitrate === '320' ? 0 : 5,
+    let execOptions = {
       output: finalPath,
       ffmpegLocation: ffmpegPath,
       noWarnings: true,
@@ -305,7 +299,20 @@ async function processJob(jobId, url, quality, finalPath) {
       youtubeSkipDashManifest: true,
       noPlaylist: true,
       extractorArgs: 'youtube:player_client=android,web',
-    });
+    };
+
+    if (type === 'video') {
+      const res = quality || '1080';
+      execOptions.format = `bestvideo[height<=${res}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`;
+      execOptions.mergeOutputFormat = 'mp4';
+    } else {
+      const bitrate = quality === '192' ? '192' : '320';
+      execOptions.extractAudio = true;
+      execOptions.audioFormat = 'mp3';
+      execOptions.audioQuality = bitrate === '320' ? 0 : 5;
+    }
+
+    const subprocess = youtubedl.exec(url, execOptions);
 
     if (subprocess.stdout) {
       subprocess.stdout.on('data', (data) => {

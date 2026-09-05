@@ -6,6 +6,9 @@ const { tmpdir } = require('os');
 const youtubedl = require('youtube-dl-exec');
 const ffmpegPath = require('ffmpeg-static');
 const crypto = require('crypto');
+const serve = require('electron-serve');
+
+const loadURL = serve({ directory: path.join(__dirname, '../out') });
 
 let mainWindow;
 
@@ -37,7 +40,7 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../out/index.html'));
+    loadURL(mainWindow);
   }
 }
 

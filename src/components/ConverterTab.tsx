@@ -7,6 +7,8 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
   const [quality, setQuality] = useState('mp3-320');
   const [status, setStatus] = useState<{ type: 'idle' | 'starting' | 'downloading' | 'processing' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
   const [preview, setPreview] = useState<any>(null);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [streamLoading, setStreamLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [progress, setProgress] = useState<any>({});
   const [loading, setLoading] = useState(false);
@@ -48,13 +50,13 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
     if (!searchTerm) return;
     setShowHistory(false);
     
-    // If it's a URL, fetch metadata directly
     if (searchTerm.includes('youtube.com') || searchTerm.includes('youtu.be')) {
       setLoading(true);
       try {
         const data = await (window as any).electron.getInfo(searchTerm);
         if (data.success) {
           setPreview(data.info);
+          setStreamUrl(null);
           setSearchResults([]);
           setStatus({ type: 'idle', message: '' }); 
         } else {
@@ -67,9 +69,9 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         setLoading(false);
       }
     } else {
-      // It's a text search
       setLoading(true);
       setPreview(null);
+      setStreamUrl(null);
       try {
         const data = await (window as any).electron.searchYoutube(searchTerm);
         if (data.success) {
@@ -86,16 +88,35 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
     }
   };
 
+  const loadStream = async (videoInfo: any) => {
+    setPreview(videoInfo);
+    setStreamUrl(null);
+    setStreamLoading(true);
+    try {
+      const urlToFetch = videoInfo.url || `https://www.youtube.com/watch?v=${videoInfo.id}`;
+      const res = await (window as any).electron.getStreamUrl(urlToFetch);
+      if (res.success && res.url) {
+        setStreamUrl(res.url);
+      } else {
+        setStatus({ type: 'error', message: 'Não foi possível carregar a prévia do áudio direto.' });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setStreamLoading(false);
+    }
+  };
+
   const handleDownload = async (videoInfo: any) => {
-    if (!videoInfo || !videoInfo.url) return;
+    if (!videoInfo || (!videoInfo.url && !videoInfo.id)) return;
     
     setStatus({ type: 'starting', message: 'Preparando conversão...' });
     setProgress({});
-    setPreview(videoInfo); // Set as current preview if converting from search list
+    setPreview(videoInfo);
     
     try {
       const response = await (window as any).electron.convert({ 
-        url: videoInfo.url, 
+        url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`, 
         title: videoInfo.title,
         quality: quality.includes('320') ? '320' : '192' 
       });
@@ -129,11 +150,11 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
             id: videoInfo.id,
             title: videoInfo.title,
             thumbnail: videoInfo.thumbnail,
-            url: videoInfo.url,
+            url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`,
             timestamp: Date.now(),
             format: `MP3 ${quality.includes('320') ? '320' : '192'}kbps`,
             duration: videoInfo.duration,
-            filePath: data.filePath // Saving filePath to history!
+            filePath: data.filePath
           });
         }
       });
@@ -267,7 +288,14 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
 
       {/* Search Results List */}
       {searchResults.length > 0 && !preview && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4">
+        <div className={`space-y-3 animate-in fade-in slide-in-from-bottom-4 transition-all duration-300 relative ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+          
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0b0b0e]/50 backdrop-blur-[1px] rounded-xl">
+              <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+            </div>
+          )}
+
           <h3 className="text-lg font-bold text-white mb-4 px-1">Resultados da Busca</h3>
           {searchResults.map((item, idx) => (
             <div key={idx} className="bg-[#15161C] border border-white/[0.06] hover:border-brand-500/30 p-3 rounded-xl flex items-center gap-4 transition-colors group">
@@ -281,13 +309,13 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button 
-                  onClick={() => setPreview(item)}
+                  onClick={() => (window as any).electron.openPreviewWindow(item.url || `https://youtube.com/watch?v=${item.id}`)}
                   className="bg-white/[0.05] hover:bg-white/[0.1] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
                   <Play className="w-3.5 h-3.5" /> Prévia
                 </button>
                 <button 
-                  onClick={() => handleDownload(item)}
+                  onClick={() => handleDownload({...item, url: item.url || `https://youtube.com/watch?v=${item.id}`})}
                   className="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-500/20 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" /> Baixar
@@ -298,26 +326,33 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         </div>
       )}
 
-      {/* Single Preview (from URL or Selected from Search) */}
+      {/* Single Native Audio Preview (from URL or Selected from Search) */}
       {preview && (
         <div className="bg-[#15161C] border border-brand-500/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in fade-in slide-in-from-bottom-4">
-          <div className="w-full md:w-[40%] bg-black relative aspect-video md:aspect-auto">
-            <iframe 
-              src={`https://www.youtube.com/embed/${preview.id}?autoplay=0`} 
-              className="w-full h-full absolute inset-0" 
-              frameBorder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowFullScreen
-              title="Prévia do YouTube"
-            ></iframe>
+          <div 
+            onClick={() => (window as any).electron.openPreviewWindow(preview.url || `https://youtube.com/watch?v=${preview.id}`)}
+            className="w-full md:w-[40%] bg-black relative flex flex-col items-center justify-center overflow-hidden min-h-[200px] group cursor-pointer"
+            title="Abrir no YouTube"
+          >
+            <img src={preview.thumbnail} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+            <div className="relative z-10 w-16 h-16 rounded-full bg-brand-600/90 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <Play className="w-8 h-8 ml-1" />
+            </div>
+            <span className="relative z-10 mt-3 text-xs font-semibold text-white/90 bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm group-hover:bg-brand-500/50 transition-colors">
+              Ouvir no YouTube
+            </span>
           </div>
           
           <div className="p-6 md:p-8 flex-1 flex flex-col justify-center relative">
-            {searchResults.length > 0 && (
+            {(searchResults.length > 0) && (
               <button 
-                onClick={() => setPreview(null)}
+                onClick={() => {
+                  if (searchResults.length > 0 && !query.startsWith('http')) {
+                    setPreview(null);
+                  }
+                }}
                 className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors"
-                title="Voltar para os resultados"
+                title="Voltar"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -339,7 +374,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
             <button 
               onClick={() => handleDownload({ ...preview, url: preview.url || `https://youtube.com/watch?v=${preview.id}` })}
               disabled={status.type === 'starting' || status.type === 'downloading' || status.type === 'processing'}
-              className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto"
+              className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto mt-auto"
             >
               <Download className="w-4 h-4" />
               Iniciar Conversão ({quality.includes('320') ? '320kbps' : '192kbps'})

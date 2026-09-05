@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -61,6 +61,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true,
     },
     icon: path.join(__dirname, '../build/icon.png'),
     backgroundColor: '#08080a',
@@ -165,6 +166,28 @@ ipcMain.handle('search-youtube', async (event, query) => {
   }
 });
 
+ipcMain.handle('get-stream-url', async (event, url) => {
+  try {
+    const info = await youtubedl(url, {
+      getUrl: true,
+      format: 'bestaudio',
+      noWarnings: true,
+      callHome: false,
+      noCheckCertificates: true,
+      preferFreeFormats: true,
+      youtubeSkipDashManifest: true,
+      extractorArgs: 'youtube:player_client=android,web'
+    });
+    
+    // getUrl actually just returns the string directly if dumpSingleJson is not used, 
+    // but youtube-dl-exec's default returns a string when returning output like -g
+    return { success: true, url: typeof info === 'string' ? info.trim() : info.url };
+  } catch (error) {
+    console.error('Error fetching stream url:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('get-info', async (event, url) => {
   try {
     const info = await youtubedl(url, {
@@ -202,6 +225,22 @@ ipcMain.handle('get-info', async (event, url) => {
     console.error('Error fetching info:', error);
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle('open-preview-window', (event, url) => {
+  const previewWin = new BrowserWindow({
+    width: 850,
+    height: 500,
+    autoHideMenuBar: true,
+    title: "Prévia - ConvertTube",
+    backgroundColor: '#000000',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  previewWin.loadURL(url);
+  return { success: true };
 });
 
 ipcMain.handle('start-conversion', async (event, { url, quality, title }) => {

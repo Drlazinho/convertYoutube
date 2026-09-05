@@ -6,14 +6,23 @@ import { ConverterTab } from './ConverterTab';
 import { HistoryTab } from './HistoryTab';
 import { SettingsTab } from './SettingsTab';
 import { useHistory } from '@/hooks/useHistory';
-import { Headphones, Gauge, Shield, Video } from 'lucide-react';
+import { usePlayer } from '@/hooks/usePlayer';
+import { Headphones, Gauge, Shield, Video, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings'>('converter');
   const historyManager = useHistory();
+  const playerManager = usePlayer(historyManager.history);
+
+  const formatTime = (timeInSeconds: number) => {
+    if (isNaN(timeInSeconds)) return '0:00';
+    const m = Math.floor(timeInSeconds / 60);
+    const s = Math.floor(timeInSeconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen relative pb-24">
       <Header 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -21,9 +30,18 @@ export function MainApp() {
       />
       
       <main className="flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-16 flex flex-col">
-        {activeTab === 'converter' && <ConverterTab historyManager={historyManager} />}
-        {activeTab === 'history' && <HistoryTab historyManager={historyManager} />}
-        {activeTab === 'settings' && <SettingsTab />}
+        {/* Keep tabs mounted using CSS display so state is not lost */}
+        <div style={{ display: activeTab === 'converter' ? 'block' : 'none' }}>
+          <ConverterTab historyManager={historyManager} />
+        </div>
+        
+        <div style={{ display: activeTab === 'history' ? 'block' : 'none' }}>
+          <HistoryTab historyManager={historyManager} playerManager={playerManager} />
+        </div>
+        
+        <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
+          <SettingsTab />
+        </div>
         
         {/* Value Propositions Section */}
         {activeTab === 'converter' && (
@@ -85,6 +103,63 @@ export function MainApp() {
           </div>
         </div>
       </footer>
+
+      {/* Global Audio Player Setup */}
+      {playerManager.currentTrack && (
+        <div className="fixed bottom-0 left-0 right-0 h-24 bg-[#0a0a0d] border-t border-white/[0.08] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-50 flex items-center px-6 animate-in slide-in-from-bottom-full duration-300">
+          
+          <div className="absolute top-0 left-0 right-0 h-1 bg-white/[0.05] group cursor-pointer" onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            playerManager.handleSeek(percentage * playerManager.duration);
+          }}>
+            <div 
+              className="h-full bg-brand-500 relative" 
+              style={{ width: `${(playerManager.currentTime / (playerManager.duration || 1)) * 100}%` }}
+            >
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-4">
+            
+            <div className="flex items-center gap-4 w-1/3 min-w-0">
+              <div className="w-14 h-14 rounded-lg overflow-hidden bg-black flex-shrink-0 shadow-lg border border-white/[0.1]">
+                <img src={playerManager.currentTrack.thumbnail} alt="Capa" className="w-full h-full object-cover opacity-90" />
+              </div>
+              <div className="min-w-0 flex flex-col justify-center">
+                <h4 className="text-sm font-bold text-white truncate group-hover:text-brand-400 cursor-pointer" onClick={() => setActiveTab('history')}>
+                  {playerManager.currentTrack.title}
+                </h4>
+                <p className="text-xs text-neutral-400 mt-0.5 font-mono">{formatTime(playerManager.currentTime)} / {formatTime(playerManager.duration)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-6 w-1/3">
+              <button onClick={() => playerManager.playPrev(playerManager.currentTrack!.id)} className="text-neutral-400 hover:text-white transition-colors" title="Anterior">
+                <SkipBack className="w-5 h-5 fill-current" />
+              </button>
+              
+              <button 
+                onClick={playerManager.toggleCurrentPlayPause} 
+                className="w-12 h-12 flex items-center justify-center rounded-full bg-white text-black hover:scale-105 transition-transform shadow-xl"
+              >
+                {playerManager.isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
+              </button>
+              
+              <button onClick={() => playerManager.playNext(playerManager.currentTrack!.id)} className="text-neutral-400 hover:text-white transition-colors" title="Próxima">
+                <SkipForward className="w-5 h-5 fill-current" />
+              </button>
+            </div>
+
+            <div className="w-1/3 flex items-center justify-end">
+              <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest bg-brand-500/10 px-2 py-1 rounded-md border border-brand-500/20">ConvertTube Player</span>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

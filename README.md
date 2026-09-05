@@ -26,6 +26,10 @@ O **ConvertTube** é uma aplicação moderna, disponível tanto para Web como De
 
 ### Principais Funcionalidades
 
+- **Busca Integrada no YouTube:** Pesquise músicas, artistas ou cole o link diretamente na barra de pesquisa do app, mantendo um histórico rápido de buscas recentes.
+- **Player Global & Preview Nativo:** Ouça prévias das músicas diretamente antes de baixar. O player flutuante acompanha você por todas as abas, permitindo ouvir seu histórico de downloads como no Spotify (com controles completos).
+- **Gestão de Configurações:** Aba dedicada para escolher onde os arquivos serão salvos por padrão, além de personalizações do comportamento do app.
+- **Tolerância a Falhas:** Caso um arquivo já baixado seja movido ou deletado do seu computador, o app percebe e te permite refazer o download com apenas 1 clique.
 - **Qualidade Máxima de Áudio:** Extração e conversão de áudios masterizados com taxa de *320 kbps* e amostragem em *48 kHz*, garantindo que não há compressão secundária.
 - **Conversão Instantânea:** Desenhado para realizar processos de extração rápidos e assíncronos.
 - **Privacidade Garantida:** Todo o seu histórico de downloads fica guardado de forma segura e estritamente local no seu dispositivo. Nenhum dado é rastreado ou guardado na nuvem.

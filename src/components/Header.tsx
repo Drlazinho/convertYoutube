@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Video, RefreshCw, History, HelpCircle } from 'lucide-react';
+import { Download, Video, RefreshCw, History, HelpCircle, Settings } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'converter' | 'history';
-  setActiveTab: (tab: 'converter' | 'history') => void;
+  activeTab: 'converter' | 'history' | 'settings';
+  setActiveTab: (tab: 'converter' | 'history' | 'settings') => void;
   historyCount: number;
 }
 
@@ -40,7 +40,7 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-6 h-18 flex flex-col md:flex-row items-center justify-between py-3 gap-4 md:gap-0">
         
         {/* Brand Logo */}
-        <div className="flex items-center gap-2.5 group cursor-pointer">
+        <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => setActiveTab('converter')}>
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-500 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-200">
             <Video className="w-5 h-5 text-white stroke-[2.2]" />
           </div>
@@ -52,10 +52,10 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
         </div>
 
         {/* Navigation Segmented Tabs */}
-        <nav className="flex items-center bg-[#15161C] p-1 rounded-full border border-white/[0.08] shadow-inner w-full md:w-auto">
+        <nav className="flex items-center bg-[#15161C] p-1 rounded-full border border-white/[0.08] shadow-inner w-full md:w-auto overflow-x-auto">
           <button 
             onClick={() => setActiveTab('converter')}
-            className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`flex-none px-6 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === 'converter' 
                 ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
                 : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
@@ -67,7 +67,7 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
           
           <button 
             onClick={() => setActiveTab('history')}
-            className={`flex-1 md:flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === 'history' 
                 ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
                 : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
@@ -78,6 +78,18 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
             <span className="bg-white/[0.08] px-1.5 py-0.5 rounded-md text-[10px] text-neutral-300 font-bold ml-0.5">
               {historyCount}
             </span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              activeTab === 'settings' 
+                ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
+                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Configurações
           </button>
         </nav>
 

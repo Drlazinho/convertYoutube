@@ -6,4 +6,5 @@ export interface HistoryItem {
   timestamp: number;
   format: string;
   duration?: string;
+  filePath?: string;
 }

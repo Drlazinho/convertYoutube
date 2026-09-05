@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { Header } from './Header';
 import { ConverterTab } from './ConverterTab';
 import { HistoryTab } from './HistoryTab';
+import { SettingsTab } from './SettingsTab';
 import { useHistory } from '@/hooks/useHistory';
 import { Headphones, Gauge, Shield, Video } from 'lucide-react';
 
 export function MainApp() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'history'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings'>('converter');
   const historyManager = useHistory();
 
   return (
@@ -20,11 +21,9 @@ export function MainApp() {
       />
       
       <main className="flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-16 flex flex-col">
-        {activeTab === 'converter' ? (
-          <ConverterTab historyManager={historyManager} />
-        ) : (
-          <HistoryTab historyManager={historyManager} />
-        )}
+        {activeTab === 'converter' && <ConverterTab historyManager={historyManager} />}
+        {activeTab === 'history' && <HistoryTab historyManager={historyManager} />}
+        {activeTab === 'settings' && <SettingsTab />}
         
         {/* Value Propositions Section */}
         {activeTab === 'converter' && (
@@ -51,7 +50,7 @@ export function MainApp() {
                 </div>
                 <h4 className="font-bold text-sm text-white mb-1.5">Conversão Instantânea</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Servidores em nuvem de alta capacidade para downloads em ultra velocidade sem filas demoradas.
+                  Basta clicar em converter e aproveitar, usamos tecnologia ultra rápida em segundo plano.
                 </p>
               </div>
               
@@ -61,7 +60,7 @@ export function MainApp() {
                 </div>
                 <h4 className="font-bold text-sm text-white mb-1.5">Privacidade Garantida</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Seu histórico fica apenas no seu navegador. Não rastreamos ou armazenamos seus dados baixados.
+                  Seu histórico fica apenas na sua máquina. Não rastreamos ou armazenamos seus arquivos baixados.
                 </p>
               </div>
             </div>
@@ -82,7 +81,6 @@ export function MainApp() {
           <div className="flex items-center gap-6">
             <a href="#" className="hover:text-neutral-300 transition-colors">Termos de Uso</a>
             <a href="#" className="hover:text-neutral-300 transition-colors">Privacidade</a>
-            <a href="#" className="hover:text-neutral-300 transition-colors">API para Desenvolvedores</a>
             <a href="#" className="hover:text-neutral-300 transition-colors">Status</a>
           </div>
         </div>

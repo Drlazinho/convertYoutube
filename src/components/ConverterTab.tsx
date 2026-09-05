@@ -1,30 +1,61 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Loader2, Link as LinkIcon, Sparkles, Clipboard, Music, ChevronDown, Zap, ShieldCheck, Sliders } from 'lucide-react';
+import { Download, Loader2, Link as LinkIcon, Sparkles, Music, Play, Search, Clock, ChevronDown, X } from 'lucide-react';
 import { useHistory } from '@/hooks/useHistory';
 
 export function ConverterTab({ historyManager }: { historyManager: ReturnType<typeof useHistory> }) {
-  const [url, setUrl] = useState('');
+  const [query, setQuery] = useState('');
   const [quality, setQuality] = useState('mp3-320');
   const [status, setStatus] = useState<{ type: 'idle' | 'starting' | 'downloading' | 'processing' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
   const [preview, setPreview] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [progress, setProgress] = useState<any>({});
-  const [infoLoading, setInfoLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchMetadata = async () => {
-      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-        setPreview(null);
-        setInfoLoading(false);
-        return;
+    const savedHistory = localStorage.getItem('yt-search-history');
+    if (savedHistory) {
+      try { setSearchHistory(JSON.parse(savedHistory)); } catch (e) {}
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowHistory(false);
       }
-      
-      setInfoLoading(true);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const saveSearchHistory = (term: string) => {
+    if (!term || term.startsWith('http')) return;
+    const newHistory = [term, ...searchHistory.filter(t => t !== term)].slice(0, 5);
+    setSearchHistory(newHistory);
+    localStorage.setItem('yt-search-history', JSON.stringify(newHistory));
+  };
+
+  const clearSearchHistory = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSearchHistory([]);
+    localStorage.removeItem('yt-search-history');
+    setShowHistory(false);
+  };
+
+  const handleSearch = async (searchTerm: string = query) => {
+    if (!searchTerm) return;
+    setShowHistory(false);
+    
+    // If it's a URL, fetch metadata directly
+    if (searchTerm.includes('youtube.com') || searchTerm.includes('youtu.be')) {
+      setLoading(true);
       try {
-        const data = await (window as any).electron.getInfo(url);
+        const data = await (window as any).electron.getInfo(searchTerm);
         if (data.success) {
           setPreview(data.info);
+          setSearchResults([]);
           setStatus({ type: 'idle', message: '' }); 
         } else {
           setPreview(null);
@@ -32,33 +63,39 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         }
       } catch (e) {
         console.error(e);
-        setPreview(null);
       } finally {
-        setInfoLoading(false);
+        setLoading(false);
       }
-    };
-    
-    const timeoutId = setTimeout(fetchMetadata, 600);
-    return () => clearTimeout(timeoutId);
-  }, [url]);
+    } else {
+      // It's a text search
+      setLoading(true);
+      setPreview(null);
+      try {
+        const data = await (window as any).electron.searchYoutube(searchTerm);
+        if (data.success) {
+          setSearchResults(data.results);
+          saveSearchHistory(searchTerm);
+        } else {
+          setStatus({ type: 'error', message: data.error || 'Erro ao buscar.' });
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
-  const handleDownload = async () => {
-    if (!url || !preview) return;
+  const handleDownload = async (videoInfo: any) => {
+    if (!videoInfo || !videoInfo.url) return;
     
     setStatus({ type: 'starting', message: 'Preparando conversão...' });
     setProgress({});
+    setPreview(videoInfo); // Set as current preview if converting from search list
     
     try {
-      let videoInfo = preview;
-      if (!videoInfo) {
-        const infoData = await (window as any).electron.getInfo(url);
-        if (!infoData.success) throw new Error('Não foi possível obter os dados do vídeo.');
-        videoInfo = infoData.info;
-        setPreview(videoInfo);
-      }
-
       const response = await (window as any).electron.convert({ 
-        url, 
+        url: videoInfo.url, 
         title: videoInfo.title,
         quality: quality.includes('320') ? '320' : '192' 
       });
@@ -85,167 +122,231 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         } else if (data.status === 'processing') {
            setStatus({ type: 'processing', message: 'Convertendo para formato final...' });
         } else if (data.status === 'done') {
-          setStatus({ type: 'success', message: 'Conversão concluída! Salvo em Downloads.' });
+          setStatus({ type: 'success', message: 'Conversão concluída! Salvo com sucesso.' });
           cleanup();
           
           historyManager.addToHistory({
             id: videoInfo.id,
             title: videoInfo.title,
             thumbnail: videoInfo.thumbnail,
-            url: url,
+            url: videoInfo.url,
             timestamp: Date.now(),
             format: `MP3 ${quality.includes('320') ? '320' : '192'}kbps`,
-            duration: videoInfo.duration
+            duration: videoInfo.duration,
+            filePath: data.filePath // Saving filePath to history!
           });
         }
       });
-
     } catch (err: any) {
       console.error(err);
-      setStatus({ type: 'error', message: err.message || 'Ocorreu um erro inesperado.' });
+      setStatus({ type: 'error', message: err.message || 'Falha ao iniciar conversão' });
     }
   };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        setUrl(text);
-      }
-    } catch (e) {
-      console.error('Failed to read clipboard', e);
-    }
-  };
-
-  const isWorking = ['starting', 'downloading', 'processing'].includes(status.type);
 
   return (
-    <section className="space-y-8 animate-in fade-in duration-500">
-      
-      {/* Headline & Subtitle */}
-      <div className="text-center space-y-3 pt-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[11px] font-bold uppercase tracking-wider mb-1">
-          <Sparkles className="w-3.5 h-3.5" /> 100% Gratuito &amp; Ilimitado
-        </div>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400">
-          YouTube para MP3
-        </h1>
-        <p className="text-neutral-400 text-sm sm:text-base max-w-xl mx-auto font-normal leading-relaxed">
-          Baixe o áudio dos seus vídeos preferidos com a mais alta qualidade possível em segundos.
-        </p>
-      </div>
-
-      {/* Main Input Panel Card */}
-      <div className="relative bg-surface-card/90 backdrop-blur-md rounded-2xl p-3 sm:p-5 border border-surface-border shadow-2xl transition-all hover:border-surface-borderHover">
-        <div className="space-y-4">
-          
-          {/* URL Input Bar */}
-          <div className="relative flex items-center bg-[#090a0d] rounded-xl border border-white/[0.09] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500/50 transition-all p-1.5 shadow-inner">
-            <div className="pl-3.5 text-neutral-400">
-              <LinkIcon className="w-5 h-5 text-neutral-400" />
+    <div className="flex flex-col gap-6 lg:gap-8 max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Input Section */}
+      <div className="bg-[#15161C] border border-white/[0.08] rounded-2xl p-6 md:p-8 shadow-2xl relative shadow-brand-500/5">
+        <h1 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Conversor de Alta Fidelidade</h1>
+        <p className="text-sm text-neutral-400 mb-8">Cole o link do YouTube ou pesquise pelo nome da música/artista.</p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 relative">
+          <div className="relative flex-grow" ref={searchContainerRef}>
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-500">
+              {query.startsWith('http') ? <LinkIcon className="h-5 w-5" /> : <Search className="h-5 w-5" />}
             </div>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              disabled={isWorking}
-              placeholder="Cole o link do YouTube aqui..."
-              className="w-full bg-transparent border-0 text-white placeholder-neutral-500 focus:ring-0 text-sm sm:text-base px-3 py-2 font-medium focus:outline-none"
+            <input 
+              type="text" 
+              placeholder="Ex: https://youtube.com/watch?v=... ou 'Queen Bohemian Rhapsody'" 
+              className="w-full bg-[#0b0b0e] border border-white/[0.1] text-white text-sm rounded-xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all shadow-inner"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setShowHistory(true)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
-            {/* Quick Action: Paste */}
-            <button 
-              onClick={handlePaste}
-              disabled={isWorking}
-              title="Colar da área de transferência"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-neutral-300 hover:text-white transition-all border border-white/[0.05] mr-1 disabled:opacity-50"
-            >
-              <Clipboard className="w-3.5 h-3.5" />
-              <span>Colar</span>
-            </button>
-          </div>
-
-          {/* Controls Bar: Format Selector + Action Button */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
-            {/* Quality Selector */}
-            <div className="w-full sm:w-64 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-400">
-                <Music className="w-4 h-4 text-brand-500" />
-              </div>
-              <select 
-                value={quality}
-                onChange={(e) => setQuality(e.target.value)}
-                disabled={isWorking}
-                className="w-full pl-9 pr-8 py-3 bg-[#0A0B0F] border border-white/[0.09] rounded-xl text-xs sm:text-sm font-semibold text-neutral-200 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer appearance-none transition-colors disabled:opacity-50"
-              >
-                <option value="mp3-320">MP3 320 kbps (Melhor)</option>
-                <option value="mp3-256">MP3 256 kbps (Padrão)</option>
-                <option value="mp3-128">MP3 128 kbps (Compacto)</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-400">
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-
-            {/* Primary Action Button */}
-            <button 
-              onClick={handleDownload}
-              disabled={isWorking || !url || infoLoading}
-              className="w-full sm:flex-1 py-3 px-6 bg-gradient-to-r from-brand-600 via-brand-500 to-rose-600 hover:from-brand-500 hover:to-rose-500 text-white font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 shadow-lg shadow-brand-500/25 glow-hover active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isWorking || infoLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 stroke-[2.4]" />
-              )}
-              <span>{isWorking ? 'Processando...' : infoLoading ? 'Buscando...' : 'Converter Agora'}</span>
-            </button>
-          </div>
-
-          {/* Feature micro-badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6 pt-3 text-[11px] text-neutral-400 font-medium">
-            <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-amber-400" /> Renderização em 2s</span>
-            <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Sem propagandas intrusivas</span>
-            <span className="flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5 text-sky-400" /> Tags ID3 automáticas inclusas</span>
-          </div>
-
-        </div>
-
-        {/* Dynamic Preview Area */}
-        {preview && !infoLoading && (
-          <div className="mt-5 pt-4 border-t border-white/[0.08] flex items-center gap-4 animate-in fade-in">
-            <div className="relative w-24 h-14 rounded-lg overflow-hidden border border-white/[0.08]">
-              <img src={preview.thumbnail} alt="thumb" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-white font-medium truncate">{preview.title}</p>
-              <p className="text-xs text-neutral-400 mt-1">{preview.channel} • {preview.duration}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Progress Simulated Bar */}
-        {(isWorking || status.type === 'error' || status.type === 'success') && (
-          <div className="mt-5 pt-4 border-t border-white/[0.08] space-y-2 animate-in fade-in">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className={`${status.type === 'error' ? 'text-rose-500' : status.type === 'success' ? 'text-emerald-500' : 'text-brand-500'} flex items-center gap-2`}>
-                {isWorking && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {status.message}
-              </span>
-              {isWorking && <span className="text-neutral-300">{progress.percent || 0}%</span>}
-            </div>
             
-            {isWorking && (
-              <div className="w-full h-2 bg-neutral-900 rounded-full overflow-hidden border border-white/[0.05]">
-                <div 
-                  className="h-full bg-gradient-to-r from-brand-600 to-rose-400 rounded-full transition-all duration-300"
-                  style={{ width: `${progress.percent || (status.type === 'processing' ? 100 : 0)}%` }}
-                ></div>
+            {/* Search History Dropdown */}
+            {showHistory && searchHistory.length > 0 && !query.startsWith('http') && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#15161C] border border-white/[0.08] rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-white/[0.02] border-b border-white/[0.05]">
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Buscas Recentes</span>
+                  <button onClick={clearSearchHistory} className="text-xs text-neutral-500 hover:text-rose-400 transition-colors">Limpar</button>
+                </div>
+                {searchHistory.map((item, idx) => (
+                  <button 
+                    key={idx}
+                    className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors text-sm text-neutral-300"
+                    onClick={() => {
+                      setQuery(item);
+                      handleSearch(item);
+                    }}
+                  >
+                    <Clock className="w-4 h-4 text-neutral-500" />
+                    {item}
+                  </button>
+                ))}
               </div>
             )}
           </div>
-        )}
+          
+          <button 
+            onClick={() => handleSearch()}
+            disabled={!query || loading}
+            className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex-shrink-0 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+            Buscar
+          </button>
+        </div>
 
+        {/* Quality Selector */}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Qualidade:</span>
+          <div className="flex bg-[#0b0b0e] p-1 rounded-lg border border-white/[0.06]">
+            <button 
+              onClick={() => setQuality('mp3-320')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-320' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+            >
+              MP3 320kbps (Alta)
+            </button>
+            <button 
+              onClick={() => setQuality('mp3-192')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-192' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+            >
+              MP3 192kbps (Normal)
+            </button>
+          </div>
+        </div>
       </div>
-    </section>
+
+      {/* Error Message */}
+      {status.type === 'error' && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
+          {status.message}
+        </div>
+      )}
+
+      {/* Progress View */}
+      {(status.type === 'starting' || status.type === 'downloading' || status.type === 'processing') && (
+        <div className="bg-[#15161C] border border-brand-500/30 rounded-xl p-6 shadow-xl animate-in fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-white flex items-center gap-2 text-sm">
+              <Loader2 className="w-4 h-4 text-brand-500 animate-spin" />
+              {status.message}
+            </h3>
+            {progress.percent !== undefined && (
+              <span className="text-brand-400 font-mono font-bold text-sm">{progress.percent.toFixed(1)}%</span>
+            )}
+          </div>
+          
+          <div className="w-full bg-black/40 rounded-full h-2.5 mb-3 overflow-hidden border border-white/[0.05]">
+            <div 
+              className="bg-gradient-to-r from-brand-600 to-brand-400 h-2.5 rounded-full transition-all duration-300 ease-out relative"
+              style={{ width: `${progress.percent || (status.type === 'starting' ? 5 : 100)}%` }}
+            >
+              <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1s_infinite] -skew-x-12"></div>
+            </div>
+          </div>
+          
+          <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
+            <span>{progress.totalSize ? `Tamanho: ${progress.totalSize}` : 'Calculando...'}</span>
+            <span>{progress.speed ? `Velocidade: ${progress.speed}` : ''}</span>
+            <span>{progress.eta ? `Tempo restante: ${progress.eta}` : ''}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {status.type === 'success' && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <Sparkles className="w-4 h-4" />
+          {status.message}
+        </div>
+      )}
+
+      {/* Search Results List */}
+      {searchResults.length > 0 && !preview && (
+        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4">
+          <h3 className="text-lg font-bold text-white mb-4 px-1">Resultados da Busca</h3>
+          {searchResults.map((item, idx) => (
+            <div key={idx} className="bg-[#15161C] border border-white/[0.06] hover:border-brand-500/30 p-3 rounded-xl flex items-center gap-4 transition-colors group">
+              <div className="relative w-32 h-20 bg-black rounded-lg overflow-hidden flex-shrink-0">
+                <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">{item.duration}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-white truncate pr-4">{item.title}</h4>
+                <p className="text-xs text-neutral-400 mt-1 truncate">{item.channel}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={() => setPreview(item)}
+                  className="bg-white/[0.05] hover:bg-white/[0.1] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <Play className="w-3.5 h-3.5" /> Prévia
+                </button>
+                <button 
+                  onClick={() => handleDownload(item)}
+                  className="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-500/20 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" /> Baixar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Single Preview (from URL or Selected from Search) */}
+      {preview && (
+        <div className="bg-[#15161C] border border-brand-500/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in fade-in slide-in-from-bottom-4">
+          <div className="w-full md:w-[40%] bg-black relative aspect-video md:aspect-auto">
+            <iframe 
+              src={`https://www.youtube.com/embed/${preview.id}?autoplay=0`} 
+              className="w-full h-full absolute inset-0" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+              title="Prévia do YouTube"
+            ></iframe>
+          </div>
+          
+          <div className="p-6 md:p-8 flex-1 flex flex-col justify-center relative">
+            {searchResults.length > 0 && (
+              <button 
+                onClick={() => setPreview(null)}
+                className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors"
+                title="Voltar para os resultados"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-500/20">
+                Pronto para Download
+              </span>
+              <span className="bg-white/[0.08] text-neutral-300 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                {preview.duration}
+              </span>
+            </div>
+            
+            <h3 className="text-xl font-bold text-white mb-2 leading-tight line-clamp-2">
+              {preview.title}
+            </h3>
+            <p className="text-sm text-neutral-400 mb-8">{preview.channel}</p>
+            
+            <button 
+              onClick={() => handleDownload({ ...preview, url: preview.url || `https://youtube.com/watch?v=${preview.id}` })}
+              disabled={status.type === 'starting' || status.type === 'downloading' || status.type === 'processing'}
+              className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto"
+            >
+              <Download className="w-4 h-4" />
+              Iniciar Conversão ({quality.includes('320') ? '320kbps' : '192kbps'})
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

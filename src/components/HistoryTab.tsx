@@ -1,9 +1,46 @@
-import React from 'react';
-import { Download, Trash2, Clock, Play, Trash } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Download, Trash2, Clock, Play, Pause, Trash } from 'lucide-react';
 import { useHistory } from '@/hooks/useHistory';
 
 export function HistoryTab({ historyManager }: { historyManager: ReturnType<typeof useHistory> }) {
   const { history, isLoaded, removeFromHistory, clearHistory } = historyManager;
+  const [playing, setPlaying] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePlay = (filePath?: string, id?: string) => {
+    if (!filePath) {
+      alert('Arquivo não encontrado no registro.');
+      return;
+    }
+    
+    if (playing === id) {
+      // Pause
+      audioRef.current?.pause();
+      setPlaying(null);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const newAudio = new Audio(`local-media://${encodeURIComponent(filePath.replace(/\\/g, '/'))}`);
+      newAudio.play().then(() => {
+        setPlaying(id || null);
+      }).catch(err => {
+        console.error(err);
+        alert('Erro ao reproduzir o arquivo. Ele pode ter sido movido ou excluído.');
+      });
+      
+      newAudio.onended = () => setPlaying(null);
+      audioRef.current = newAudio;
+    }
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
 
   if (!isLoaded) {
     return <div className="p-8 text-center text-neutral-500 animate-pulse text-sm">Carregando histórico...</div>;
@@ -93,12 +130,15 @@ export function HistoryTab({ historyManager }: { historyManager: ReturnType<type
 
             {/* Actions Toolbar */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-white/[0.05]">
-              <button 
-                className="w-8 h-8 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 hover:text-white flex items-center justify-center transition-colors text-xs" 
-                title="Ouvir Prévia"
-              >
-                <Play className="w-3.5 h-3.5 ml-0.5" />
-              </button>
+              {item.filePath && (
+                <button 
+                  onClick={() => handlePlay(item.filePath, item.id)}
+                  className={`w-8 h-8 rounded-lg ${playing === item.id ? 'bg-brand-500 text-white' : 'bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300'} hover:text-white flex items-center justify-center transition-colors text-xs`}
+                  title="Ouvir Download"
+                >
+                  {playing === item.id ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
+                </button>
+              )}
               
               <a 
                 href={item.url}

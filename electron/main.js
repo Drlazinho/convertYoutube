@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const { join } = require('path');
 const { tmpdir } = require('os');
 const { create } = require('youtube-dl-exec');
@@ -22,6 +23,22 @@ const ffmpegPath = app.isPackaged
 const serve = require('electron-serve').default || require('electron-serve');
 
 const loadURL = serve({ directory: path.join(__dirname, '../out') });
+
+// Settings management
+const configPath = path.join(app.getPath('userData'), 'config.json');
+function readConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    }
+  } catch (e) { console.error('Error reading config', e); }
+  return { defaultDirectory: '', autoSave: false };
+}
+function writeConfig(config) {
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  } catch (e) { console.error('Error writing config', e); }
+}
 
 let mainWindow;
 
@@ -59,6 +76,16 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Register custom protocol for playing local media files safely
+  protocol.registerFileProtocol('local-media', (request, callback) => {
+    const url = request.url.replace('local-media://', '');
+    try {
+      return callback({ path: decodeURIComponent(url) });
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
   createWindow();
 
   app.on('activate', () => {
@@ -75,6 +102,69 @@ app.on('window-all-closed', () => {
 });
 
 // IPC Handlers
+ipcMain.handle('get-settings', () => {
+  return readConfig();
+});
+
+ipcMain.handle('save-settings', (event, newConfig) => {
+  writeConfig(newConfig);
+  return { success: true };
+});
+
+ipcMain.handle('choose-directory', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory']
+  });
+  if (!canceled && filePaths.length > 0) {
+    return filePaths[0];
+  }
+  return null;
+});
+
+ipcMain.handle('search-youtube', async (event, query) => {
+  try {
+    const searchUrl = `ytsearch10:${query}`;
+    const info = await youtubedl(searchUrl, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      callHome: false,
+      noCheckCertificates: true,
+      preferFreeFormats: true,
+      youtubeSkipDashManifest: true,
+      extractorArgs: 'youtube:player_client=android,web',
+    });
+
+    // yt-dlp returns an object with an 'entries' array for searches
+    if (info && info.entries) {
+      const results = info.entries.map(entry => {
+        const seconds = entry.duration || 0;
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        let duration = `${m}:${s}`;
+        if (seconds >= 3600) {
+          const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+          const mm = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+          duration = `${h}:${mm}:${s}`;
+        }
+        
+        return {
+          id: entry.id,
+          title: entry.title,
+          channel: entry.uploader || entry.channel,
+          thumbnail: (entry.thumbnails && entry.thumbnails.length > 0) ? entry.thumbnails[entry.thumbnails.length - 1].url : '',
+          duration,
+          url: entry.webpage_url || `https://www.youtube.com/watch?v=${entry.id}`
+        };
+      });
+      return { success: true, results };
+    }
+    return { success: false, error: 'Nenhum resultado encontrado.' };
+  } catch (error) {
+    console.error('Error searching info:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('get-info', async (event, url) => {
   try {
     const info = await youtubedl(url, {
@@ -116,24 +206,27 @@ ipcMain.handle('get-info', async (event, url) => {
 
 ipcMain.handle('start-conversion', async (event, { url, quality, title }) => {
   const jobId = crypto.randomUUID();
-  
-  // Sanitize title to be a valid file name (remove illegal characters)
   const safeTitle = (title || 'audio_youtube').replace(/[<>:"\/\\|?*\x00-\x1F]/g, '').trim();
   
-  // Choose save location dialog
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Salvar Áudio',
-    defaultPath: path.join(app.getPath('downloads'), `${safeTitle}.mp3`),
-    filters: [
-      { name: 'Audio MP3', extensions: ['mp3'] }
-    ]
-  });
+  const config = readConfig();
+  let finalPath = '';
+  
+  if (config.autoSave && config.defaultDirectory) {
+    finalPath = path.join(config.defaultDirectory, `${safeTitle}.mp3`);
+  } else {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Salvar Áudio',
+      defaultPath: path.join(config.defaultDirectory || app.getPath('downloads'), `${safeTitle}.mp3`),
+      filters: [{ name: 'Audio MP3', extensions: ['mp3'] }]
+    });
 
-  if (canceled || !filePath) {
-    return { success: false, error: 'Download cancelado pelo usuário.' };
+    if (canceled || !filePath) {
+      return { success: false, error: 'Download cancelado pelo usuário.' };
+    }
+    finalPath = filePath;
   }
 
-  processJob(jobId, url, quality, filePath).catch(err => {
+  processJob(jobId, url, quality, finalPath).catch(err => {
     console.error('Job background error:', err);
     mainWindow.webContents.send(`progress-${jobId}`, { status: 'error', error: err.message });
   });

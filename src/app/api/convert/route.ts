@@ -43,6 +43,7 @@ async function processJob(jobId: string, url: string, quality: string) {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       noPlaylist: true,
+      // @ts-ignore: extractorArgs is a valid yt-dlp flag not included in youtube-dl-exec TS definitions
       extractorArgs: 'youtube:player_client=android,web',
     }) as any;
 
@@ -71,6 +72,7 @@ async function processJob(jobId: string, url: string, quality: string) {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       noPlaylist: true,
+      // @ts-ignore: extractorArgs is a valid yt-dlp flag not included in youtube-dl-exec TS definitions
       extractorArgs: 'youtube:player_client=android,web',
     });
 

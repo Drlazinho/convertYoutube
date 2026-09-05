@@ -5,7 +5,6 @@ const { join } = require('path');
 const { tmpdir } = require('os');
 const { create } = require('youtube-dl-exec');
 const crypto = require('crypto');
-const serve = require('electron-serve');
 
 const isWin = os.platform() === 'win32';
 const ytdlpBinary = isWin ? 'yt-dlp.exe' : 'yt-dlp';

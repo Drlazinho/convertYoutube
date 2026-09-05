@@ -22,8 +22,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       
       setInfoLoading(true);
       try {
-        const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
-        const data = await res.json();
+        const data = await (window as any).electron.getInfo(url);
         if (data.success) {
           setPreview(data.info);
           setStatus({ type: 'idle', message: '' }); 
@@ -43,14 +42,6 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
     return () => clearTimeout(timeoutId);
   }, [url]);
 
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-    };
-  }, []);
-
   const handleDownload = async () => {
     if (!url || !preview) return;
     
@@ -60,35 +51,28 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
     try {
       let videoInfo = preview;
       if (!videoInfo) {
-        const infoRes = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
-        const infoData = await infoRes.json();
+        const infoData = await (window as any).electron.getInfo(url);
         if (!infoData.success) throw new Error('Não foi possível obter os dados do vídeo.');
         videoInfo = infoData.info;
         setPreview(videoInfo);
       }
 
-      const response = await fetch(`/api/convert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, quality: quality.includes('320') ? '320' : '192' }) // simplify for backend
+      const response = await (window as any).electron.convert({ 
+        url, 
+        title: videoInfo.title,
+        quality: quality.includes('320') ? '320' : '192' 
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro na conversão.');
+      if (!response.success) {
+        throw new Error(response.error || 'Download cancelado ou com erro.');
       }
 
-      const { jobId } = await response.json();
+      const { jobId } = response;
       
-      const evtSource = new EventSource(`/api/progress?jobId=${jobId}`);
-      eventSourceRef.current = evtSource;
-
-      evtSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
+      const cleanup = (window as any).electron.onProgress(jobId, (data: any) => {
         if (data.status === 'error') {
           setStatus({ type: 'error', message: data.error || 'Erro durante o processamento' });
-          evtSource.close();
+          cleanup();
           return;
         }
         
@@ -101,10 +85,8 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         } else if (data.status === 'processing') {
            setStatus({ type: 'processing', message: 'Convertendo para formato final...' });
         } else if (data.status === 'done') {
-          setStatus({ type: 'success', message: 'Conversão concluída!' });
-          evtSource.close();
-          
-          window.location.href = `/api/download?jobId=${jobId}`;
+          setStatus({ type: 'success', message: 'Conversão concluída! Salvo em Downloads.' });
+          cleanup();
           
           historyManager.addToHistory({
             id: videoInfo.id,
@@ -116,13 +98,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
             duration: videoInfo.duration
           });
         }
-      };
-
-      evtSource.onerror = (err) => {
-        console.error('SSE Error', err);
-        setStatus({ type: 'error', message: 'A conexão foi interrompida.' });
-        evtSource.close();
-      };
+      });
 
     } catch (err: any) {
       console.error(err);

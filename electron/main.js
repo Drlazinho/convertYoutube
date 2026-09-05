@@ -45,6 +45,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+    icon: path.join(__dirname, '../build/icon.png'),
     backgroundColor: '#08080a',
   });
 

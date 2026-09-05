@@ -3,9 +3,23 @@ const path = require('path');
 const os = require('os');
 const { join } = require('path');
 const { tmpdir } = require('os');
-const youtubedl = require('youtube-dl-exec');
-const ffmpegPath = require('ffmpeg-static');
+const { create } = require('youtube-dl-exec');
 const crypto = require('crypto');
+const serve = require('electron-serve');
+
+const isWin = os.platform() === 'win32';
+const ytdlpBinary = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+const ffmpegBinary = isWin ? 'ffmpeg.exe' : 'ffmpeg';
+
+const ytdlpPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'youtube-dl-exec', 'bin', ytdlpBinary)
+  : path.join(__dirname, '../node_modules/youtube-dl-exec/bin', ytdlpBinary);
+
+const youtubedl = create(ytdlpPath);
+
+const ffmpegPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', ffmpegBinary)
+  : require('ffmpeg-static');
 const serve = require('electron-serve').default || require('electron-serve');
 
 const loadURL = serve({ directory: path.join(__dirname, '../out') });

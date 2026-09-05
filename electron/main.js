@@ -6,7 +6,7 @@ const { tmpdir } = require('os');
 const youtubedl = require('youtube-dl-exec');
 const ffmpegPath = require('ffmpeg-static');
 const crypto = require('crypto');
-const serve = require('electron-serve');
+const serve = require('electron-serve').default || require('electron-serve');
 
 const loadURL = serve({ directory: path.join(__dirname, '../out') });
 

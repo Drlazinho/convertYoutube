@@ -1,153 +1,153 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Download, Loader2, Link as LinkIcon, Sparkles, Music, Play, Search, Clock, ChevronDown, X } from 'lucide-react';
-import { useHistory } from '@/hooks/useHistory';
+import React, { useState, useEffect, useRef } from 'react'
+import { Download, Loader2, Link as LinkIcon, Sparkles, Music, Play, Search, Clock, ChevronDown, X } from 'lucide-react'
+import { useHistory } from '@/hooks/useHistory'
 
 export function ConverterTab({ historyManager }: { historyManager: ReturnType<typeof useHistory> }) {
-  const [query, setQuery] = useState('');
-  const [mediaType, setMediaType] = useState<'audio' | 'video'>('audio');
-  const [quality, setQuality] = useState('mp3-320');
-  const [status, setStatus] = useState<{ type: 'idle' | 'starting' | 'downloading' | 'processing' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
-  const [preview, setPreview] = useState<any>(null);
-  const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [streamLoading, setStreamLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [progress, setProgress] = useState<any>({});
-  const [loading, setLoading] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('')
+  const [mediaType, setMediaType] = useState<'audio' | 'video'>('audio')
+  const [quality, setQuality] = useState('mp3-320')
+  const [status, setStatus] = useState<{ type: 'idle' | 'starting' | 'downloading' | 'processing' | 'success' | 'error', message: string }>({ type: 'idle', message: '' })
+  const [preview, setPreview] = useState<any>(null)
+  const [streamUrl, setStreamUrl] = useState<string | null>(null)
+  const [streamLoading, setStreamLoading] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [progress, setProgress] = useState<any>({})
+  const [loading, setLoading] = useState(false)
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+
+  const searchContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const savedHistory = localStorage.getItem('yt-search-history');
+    const savedHistory = localStorage.getItem('yt-search-history')
     if (savedHistory) {
-      try { setSearchHistory(JSON.parse(savedHistory)); } catch (e) {}
+      try { setSearchHistory(JSON.parse(savedHistory)) } catch (e) { }
     }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
-        setShowHistory(false);
+        setShowHistory(false)
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const saveSearchHistory = (term: string) => {
-    if (!term || term.startsWith('http')) return;
-    const newHistory = [term, ...searchHistory.filter(t => t !== term)].slice(0, 5);
-    setSearchHistory(newHistory);
-    localStorage.setItem('yt-search-history', JSON.stringify(newHistory));
-  };
+    if (!term || term.startsWith('http')) return
+    const newHistory = [term, ...searchHistory.filter(t => t !== term)].slice(0, 5)
+    setSearchHistory(newHistory)
+    localStorage.setItem('yt-search-history', JSON.stringify(newHistory))
+  }
 
   const clearSearchHistory = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSearchHistory([]);
-    localStorage.removeItem('yt-search-history');
-    setShowHistory(false);
-  };
+    e.stopPropagation()
+    setSearchHistory([])
+    localStorage.removeItem('yt-search-history')
+    setShowHistory(false)
+  }
 
   const handleSearch = async (searchTerm: string = query) => {
-    if (!searchTerm) return;
-    setShowHistory(false);
-    
+    if (!searchTerm) return
+    setShowHistory(false)
+
     if (searchTerm.includes('youtube.com') || searchTerm.includes('youtu.be')) {
-      setLoading(true);
+      setLoading(true)
       try {
-        const data = await (window as any).electron.getInfo(searchTerm);
+        const data = await (window as any).electron.getInfo(searchTerm)
         if (data.success) {
-          setPreview(data.info);
-          setStreamUrl(null);
-          setSearchResults([]);
-          setStatus({ type: 'idle', message: '' }); 
+          setPreview(data.info)
+          setStreamUrl(null)
+          setSearchResults([])
+          setStatus({ type: 'idle', message: '' })
         } else {
-          setPreview(null);
-          setStatus({ type: 'error', message: data.error || 'Vídeo não encontrado ou link inválido.' });
+          setPreview(null)
+          setStatus({ type: 'error', message: data.error || 'Vídeo não encontrado ou link inválido.' })
         }
       } catch (e) {
-        console.error(e);
+        console.error(e)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     } else {
-      setLoading(true);
-      setPreview(null);
-      setStreamUrl(null);
+      setLoading(true)
+      setPreview(null)
+      setStreamUrl(null)
       try {
-        const data = await (window as any).electron.searchYoutube(searchTerm);
+        const data = await (window as any).electron.searchYoutube(searchTerm)
         if (data.success) {
-          setSearchResults(data.results);
-          saveSearchHistory(searchTerm);
+          setSearchResults(data.results)
+          saveSearchHistory(searchTerm)
         } else {
-          setStatus({ type: 'error', message: data.error || 'Erro ao buscar.' });
+          setStatus({ type: 'error', message: data.error || 'Erro ao buscar.' })
         }
       } catch (e) {
-        console.error(e);
+        console.error(e)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
-  };
+  }
 
   const loadStream = async (videoInfo: any) => {
-    setPreview(videoInfo);
-    setStreamUrl(null);
-    setStreamLoading(true);
+    setPreview(videoInfo)
+    setStreamUrl(null)
+    setStreamLoading(true)
     try {
-      const urlToFetch = videoInfo.url || `https://www.youtube.com/watch?v=${videoInfo.id}`;
-      const res = await (window as any).electron.getStreamUrl(urlToFetch);
+      const urlToFetch = videoInfo.url || `https://www.youtube.com/watch?v=${videoInfo.id}`
+      const res = await (window as any).electron.getStreamUrl(urlToFetch)
       if (res.success && res.url) {
-        setStreamUrl(res.url);
+        setStreamUrl(res.url)
       } else {
-        setStatus({ type: 'error', message: 'Não foi possível carregar a prévia do áudio direto.' });
+        setStatus({ type: 'error', message: 'Não foi possível carregar a prévia do áudio direto.' })
       }
     } catch (e) {
-      console.error(e);
+      console.error(e)
     } finally {
-      setStreamLoading(false);
+      setStreamLoading(false)
     }
-  };
+  }
 
   const handleDownload = async (videoInfo: any) => {
-    if (!videoInfo || (!videoInfo.url && !videoInfo.id)) return;
-    
-    setStatus({ type: 'starting', message: 'Preparando conversão...' });
-    setProgress({});
-    setPreview(videoInfo);
-    
+    if (!videoInfo || (!videoInfo.url && !videoInfo.id)) return
+
+    setStatus({ type: 'starting', message: 'Preparando conversão...' })
+    setProgress({})
+    setPreview(videoInfo)
+
     try {
-      const response = await (window as any).electron.convert({ 
-        url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`, 
+      const response = await (window as any).electron.convert({
+        url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`,
         title: videoInfo.title,
         quality: mediaType === 'video' ? quality : (quality.includes('320') ? '320' : '192'),
         type: mediaType
-      });
+      })
 
       if (!response.success) {
-        throw new Error(response.error || 'Download cancelado ou com erro.');
+        throw new Error(response.error || 'Download cancelado ou com erro.')
       }
 
-      const { jobId } = response;
-      
+      const { jobId } = response
+
       const cleanup = (window as any).electron.onProgress(jobId, (data: any) => {
         if (data.status === 'error') {
-          setStatus({ type: 'error', message: data.error || 'Erro durante o processamento' });
-          cleanup();
-          return;
+          setStatus({ type: 'error', message: data.error || 'Erro durante o processamento' })
+          cleanup()
+          return
         }
-        
-        setProgress(data);
+
+        setProgress(data)
 
         if (data.status === 'starting') {
-           setStatus({ type: 'starting', message: 'Conectando ao YouTube...' });
+          setStatus({ type: 'starting', message: 'Conectando ao YouTube...' })
         } else if (data.status === 'downloading') {
-           setStatus({ type: 'downloading', message: mediaType === 'video' ? `Baixando vídeo e áudio...` : `Extraindo áudio de alta fidelidade...` });
+          setStatus({ type: 'downloading', message: mediaType === 'video' ? `Baixando vídeo e áudio...` : `Extraindo áudio de alta fidelidade...` })
         } else if (data.status === 'processing') {
-           setStatus({ type: 'processing', message: 'Convertendo para formato final...' });
+          setStatus({ type: 'processing', message: 'Convertendo para formato final...' })
         } else if (data.status === 'done') {
-          setStatus({ type: 'success', message: 'Conversão concluída! Salvo com sucesso.' });
-          cleanup();
-          
+          setStatus({ type: 'success', message: 'Conversão concluída! Salvo com sucesso.' })
+          cleanup()
+
           historyManager.addToHistory({
             id: videoInfo.id,
             title: videoInfo.title,
@@ -158,14 +158,14 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
             duration: videoInfo.duration,
             filePath: data.filePath,
             mediaType: mediaType
-          });
+          })
         }
-      });
+      })
     } catch (err: any) {
-      console.error(err);
-      setStatus({ type: 'error', message: err.message || 'Falha ao iniciar conversão' });
+      console.error(err)
+      setStatus({ type: 'error', message: err.message || 'Falha ao iniciar conversão' })
     }
-  };
+  }
 
   return (
     <div className="flex flex-col gap-6 lg:gap-8 max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -173,22 +173,22 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       <div className="bg-[#15161C] border border-white/[0.08] rounded-2xl p-6 md:p-8 shadow-2xl relative shadow-brand-500/5">
         <h1 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Conversor de Alta Fidelidade</h1>
         <p className="text-sm text-neutral-400 mb-8">Cole o link do YouTube ou pesquise pelo nome da música/artista.</p>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 relative">
           <div className="relative flex-grow" ref={searchContainerRef}>
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-500">
               {query.startsWith('http') ? <LinkIcon className="h-5 w-5" /> : <Search className="h-5 w-5" />}
             </div>
-            <input 
-              type="text" 
-              placeholder="Ex: https://youtube.com/watch?v=... ou 'Queen Bohemian Rhapsody'" 
+            <input
+              type="text"
+              placeholder="Ex: https://youtube.com/watch?v=... ou 'Queen Bohemian Rhapsody'"
               className="w-full bg-[#0b0b0e] border border-white/[0.1] text-white text-sm rounded-xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all shadow-inner"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setShowHistory(true)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
-            
+
             {/* Search History Dropdown */}
             {showHistory && searchHistory.length > 0 && !query.startsWith('http') && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-[#15161C] border border-white/[0.08] rounded-xl shadow-2xl z-50 overflow-hidden">
@@ -197,12 +197,12 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
                   <button onClick={clearSearchHistory} className="text-xs text-neutral-500 hover:text-rose-400 transition-colors">Limpar</button>
                 </div>
                 {searchHistory.map((item, idx) => (
-                  <button 
+                  <button
                     key={idx}
                     className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors text-sm text-neutral-300"
                     onClick={() => {
-                      setQuery(item);
-                      handleSearch(item);
+                      setQuery(item)
+                      handleSearch(item)
                     }}
                   >
                     <Clock className="w-4 h-4 text-neutral-500" />
@@ -212,14 +212,14 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
               </div>
             )}
           </div>
-          
-          <button 
+
+          <button
             onClick={() => handleSearch()}
             disabled={!query || loading}
             className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex-shrink-0 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-            Buscar
+            {loading ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
 
@@ -228,14 +228,14 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Formato:</span>
             <div className="flex bg-[#0b0b0e] p-1 rounded-lg border border-white/[0.06]">
-              <button 
-                onClick={() => { setMediaType('audio'); setQuality('mp3-320'); }}
+              <button
+                onClick={() => { setMediaType('audio'); setQuality('mp3-320') }}
                 className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${mediaType === 'audio' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
                 Áudio (MP3)
               </button>
-              <button 
-                onClick={() => { setMediaType('video'); setQuality('1080'); }}
+              <button
+                onClick={() => { setMediaType('video'); setQuality('1080') }}
                 className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${mediaType === 'video' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
                 Vídeo (MP4)
@@ -248,13 +248,13 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
             <div className="flex bg-[#0b0b0e] p-1 rounded-lg border border-white/[0.06]">
               {mediaType === 'audio' ? (
                 <>
-                  <button 
+                  <button
                     onClick={() => setQuality('mp3-320')}
                     className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-320' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
                     320kbps
                   </button>
-                  <button 
+                  <button
                     onClick={() => setQuality('mp3-192')}
                     className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${quality === 'mp3-192' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
@@ -263,25 +263,25 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
                 </>
               ) : (
                 <>
-                  <button 
+                  <button
                     onClick={() => setQuality('1080')}
                     className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '1080' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
                     1080p
                   </button>
-                  <button 
+                  <button
                     onClick={() => setQuality('720')}
                     className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '720' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
                     720p
                   </button>
-                  <button 
+                  <button
                     onClick={() => setQuality('480')}
                     className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '480' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
                     480p
                   </button>
-                  <button 
+                  <button
                     onClick={() => setQuality('360')}
                     className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${quality === '360' ? 'bg-brand-500/20 text-brand-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
@@ -314,16 +314,16 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
               <span className="text-brand-400 font-mono font-bold text-sm">{progress.percent.toFixed(1)}%</span>
             )}
           </div>
-          
+
           <div className="w-full bg-black/40 rounded-full h-2.5 mb-3 overflow-hidden border border-white/[0.05]">
-            <div 
+            <div
               className="bg-gradient-to-r from-brand-600 to-brand-400 h-2.5 rounded-full transition-all duration-300 ease-out relative"
               style={{ width: `${progress.percent || (status.type === 'starting' ? 5 : 100)}%` }}
             >
               <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1s_infinite] -skew-x-12"></div>
             </div>
           </div>
-          
+
           <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
             <span>{progress.totalSize ? `Tamanho: ${progress.totalSize}` : 'Calculando...'}</span>
             <span>{progress.speed ? `Velocidade: ${progress.speed}` : ''}</span>
@@ -343,7 +343,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       {/* Search Results List */}
       {searchResults.length > 0 && !preview && (
         <div className={`space-y-3 animate-in fade-in slide-in-from-bottom-4 transition-all duration-300 relative ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-          
+
           {loading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0b0b0e]/50 backdrop-blur-[1px] rounded-xl">
               <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
@@ -362,14 +362,14 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
                 <p className="text-xs text-neutral-400 mt-1 truncate">{item.channel}</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
-                <button 
+                <button
                   onClick={() => (window as any).electron.openPreviewWindow(item.url || `https://youtube.com/watch?v=${item.id}`)}
                   className="bg-white/[0.05] hover:bg-white/[0.1] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
                   <Play className="w-3.5 h-3.5" /> Prévia
                 </button>
-                <button 
-                  onClick={() => handleDownload({...item, url: item.url || `https://youtube.com/watch?v=${item.id}`})}
+                <button
+                  onClick={() => handleDownload({ ...item, url: item.url || `https://youtube.com/watch?v=${item.id}` })}
                   className="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-500/20 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" /> Baixar
@@ -383,7 +383,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       {/* Single Native Audio Preview (from URL or Selected from Search) */}
       {preview && (
         <div className="bg-[#15161C] border border-brand-500/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in fade-in slide-in-from-bottom-4">
-          <div 
+          <div
             onClick={() => (window as any).electron.openPreviewWindow(preview.url || `https://youtube.com/watch?v=${preview.id}`)}
             className="w-full md:w-[40%] bg-black relative flex flex-col items-center justify-center overflow-hidden min-h-[200px] group cursor-pointer"
             title="Abrir no YouTube"
@@ -396,13 +396,13 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
               Ouvir no YouTube
             </span>
           </div>
-          
+
           <div className="p-6 md:p-8 flex-1 flex flex-col justify-center relative">
             {(searchResults.length > 0) && (
-              <button 
+              <button
                 onClick={() => {
                   if (searchResults.length > 0 && !query.startsWith('http')) {
-                    setPreview(null);
+                    setPreview(null)
                   }
                 }}
                 className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors"
@@ -419,13 +419,13 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
                 {preview.duration}
               </span>
             </div>
-            
+
             <h3 className="text-xl font-bold text-white mb-2 leading-tight line-clamp-2">
               {preview.title}
             </h3>
             <p className="text-sm text-neutral-400 mb-8">{preview.channel}</p>
-            
-            <button 
+
+            <button
               onClick={() => handleDownload({ ...preview, url: preview.url || `https://youtube.com/watch?v=${preview.id}` })}
               disabled={status.type === 'starting' || status.type === 'downloading' || status.type === 'processing'}
               className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto mt-auto"
@@ -437,5 +437,5 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         </div>
       )}
     </div>
-  );
+  )
 }

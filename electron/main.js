@@ -133,6 +133,7 @@ ipcMain.handle('search-youtube', async (event, query) => {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       extractorArgs: 'youtube:player_client=android,web',
+      flatPlaylist: true,
     });
 
     // yt-dlp returns an object with an 'entries' array for searches

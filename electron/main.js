@@ -27,12 +27,13 @@ const loadURL = serve({ directory: path.join(__dirname, '../out') });
 // Settings management
 const configPath = path.join(app.getPath('userData'), 'config.json');
 function readConfig() {
+  const defaults = { defaultDirectory: '', autoSave: false, searchLimit: 20 };
   try {
     if (fs.existsSync(configPath)) {
-      return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      return { ...defaults, ...JSON.parse(fs.readFileSync(configPath, 'utf-8')) };
     }
   } catch (e) { console.error('Error reading config', e); }
-  return { defaultDirectory: '', autoSave: false };
+  return defaults;
 }
 function writeConfig(config) {
   try {
@@ -124,7 +125,9 @@ ipcMain.handle('choose-directory', async () => {
 
 ipcMain.handle('search-youtube', async (event, query) => {
   try {
-    const searchUrl = `ytsearch10:${query}`;
+    const config = readConfig();
+    const limit = config.searchLimit || 20;
+    const searchUrl = `ytsearch${limit}:${query}`;
     const info = await youtubedl(searchUrl, {
       dumpSingleJson: true,
       noWarnings: true,

@@ -4,6 +4,7 @@ import { Settings, Folder, Save, ToggleLeft, ToggleRight } from 'lucide-react';
 export function SettingsTab() {
   const [directory, setDirectory] = useState('');
   const [autoSave, setAutoSave] = useState(false);
+  const [searchLimit, setSearchLimit] = useState(20);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
 
@@ -16,6 +17,7 @@ export function SettingsTab() {
       const config = await (window as any).electron.getSettings();
       setDirectory(config.defaultDirectory || '');
       setAutoSave(config.autoSave || false);
+      setSearchLimit(config.searchLimit || 20);
     } catch (err) {
       console.error(err);
     } finally {
@@ -37,7 +39,7 @@ export function SettingsTab() {
 
   const handleSave = async () => {
     try {
-      await (window as any).electron.saveSettings({ defaultDirectory: directory, autoSave });
+      await (window as any).electron.saveSettings({ defaultDirectory: directory, autoSave, searchLimit });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -92,6 +94,37 @@ export function SettingsTab() {
             >
               {autoSave ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-neutral-500" />}
             </button>
+          </div>
+
+          <div className="flex flex-col p-5 rounded-xl border border-white/[0.08] bg-white/[0.02]">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-sm font-semibold text-white">Limite de Resultados na Busca</h4>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Define quantos vídeos serão retornados ao pesquisar.
+                </p>
+              </div>
+              <span className="text-lg font-bold text-white bg-white/[0.05] px-3 py-1 rounded-lg">
+                {searchLimit}
+              </span>
+            </div>
+            
+            <input 
+              type="range" 
+              min="10" 
+              max="100" 
+              step="10" 
+              value={searchLimit}
+              onChange={(e) => { setSearchLimit(parseInt(e.target.value)); setSaved(false); }}
+              className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-brand-500 mb-4"
+            />
+            
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <span className="text-neutral-400">Tempo de Resposta esperado:</span>
+              {searchLimit <= 30 && <span className="text-emerald-400 flex items-center gap-1">⚡ Rápida</span>}
+              {searchLimit > 30 && searchLimit <= 60 && <span className="text-yellow-400 flex items-center gap-1">⏳ Moderada</span>}
+              {searchLimit > 60 && <span className="text-rose-400 flex items-center gap-1">🐢 Lenta</span>}
+            </div>
           </div>
 
           <div className="pt-4 flex justify-end">

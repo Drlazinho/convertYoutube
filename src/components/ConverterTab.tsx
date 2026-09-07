@@ -11,9 +11,11 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
   const [streamUrl, setStreamUrl] = useState<string | null>(null)
   const [streamLoading, setStreamLoading] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [progress, setProgress] = useState<any>({})
-  const [loading, setLoading] = useState(false)
-  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [progress, setProgress] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false)
 
   const searchContainerRef = useRef<HTMLDivElement>(null)
@@ -77,6 +79,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
         const data = await (window as any).electron.searchYoutube(searchTerm)
         if (data.success) {
           setSearchResults(data.results)
+          setCurrentPage(1)
           saveSearchHistory(searchTerm)
         } else {
           setStatus({ type: 'error', message: data.error || 'Erro ao buscar.' })
@@ -166,6 +169,9 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       setStatus({ type: 'error', message: err.message || 'Falha ao iniciar conversão' })
     }
   }
+
+  const totalPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
+  const paginatedResults = searchResults.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="flex flex-col gap-6 lg:gap-8 max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -351,7 +357,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
           )}
 
           <h3 className="text-lg font-bold text-white mb-4 px-1">Resultados da Busca</h3>
-          {searchResults.map((item, idx) => (
+          {paginatedResults.map((item, idx) => (
             <div key={idx} className="bg-[#15161C] border border-white/[0.06] hover:border-brand-500/30 p-3 rounded-xl flex items-center gap-4 transition-colors group">
               <div className="relative w-32 h-20 bg-black rounded-lg overflow-hidden flex-shrink-0">
                 <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -368,8 +374,8 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
                 >
                   <Play className="w-3.5 h-3.5" /> Prévia
                 </button>
-                <button
-                  onClick={() => handleDownload({ ...item, url: item.url || `https://youtube.com/watch?v=${item.id}` })}
+                <button 
+                  onClick={() => handleDownload({...item, url: item.url || `https://youtube.com/watch?v=${item.id}`})}
                   className="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-500/20 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" /> Baixar
@@ -377,6 +383,28 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
               </div>
             </div>
           ))}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-white/[0.06]">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+              >
+                Anterior
+              </button>
+              <span className="text-xs text-neutral-400 font-medium">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
         </div>
       )}
 

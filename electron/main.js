@@ -159,8 +159,6 @@ ipcMain.handle('search-youtube', async (event, query) => {
       callHome: false,
       noCheckCertificates: true,
       preferFreeFormats: true,
-      youtubeSkipDashManifest: true,
-      extractorArgs: 'youtube:player_client=android,web',
       flatPlaylist: true,
     })
 
@@ -204,8 +202,8 @@ ipcMain.handle('get-stream-url', async (event, url) => {
       callHome: false,
       noCheckCertificates: true,
       preferFreeFormats: true,
-      youtubeSkipDashManifest: true,
-      extractorArgs: 'youtube:player_client=android,web'
+
+
     })
 
     // getUrl actually just returns the string directly if dumpSingleJson is not used, 
@@ -225,9 +223,9 @@ ipcMain.handle('get-info', async (event, url) => {
       callHome: false,
       noCheckCertificates: true,
       preferFreeFormats: true,
-      youtubeSkipDashManifest: true,
+
       noPlaylist: true,
-      extractorArgs: 'youtube:player_client=android,web',
+
     })
 
     const seconds = info.duration
@@ -325,18 +323,18 @@ async function processJob(jobId, url, quality, finalPath, type) {
       callHome: false,
       noCheckCertificates: true,
       preferFreeFormats: true,
-      youtubeSkipDashManifest: true,
+
       noPlaylist: true,
-      extractorArgs: 'youtube:player_client=android,web',
+
       embedMetadata: true,
       embedThumbnail: true,
       convertThumbnails: 'jpg',
     }
 
     if (type === 'video') {
-      const res = quality || '1080'
-      execOptions.format = `bestvideo[height<=${res}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`
-      execOptions.mergeOutputFormat = 'mp4'
+      const res = quality || '1080';
+      execOptions.format = `bestvideo[vcodec^=avc][height<=${res}]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best`;
+      execOptions.mergeOutputFormat = 'mp4';
     } else {
       const bitrate = quality === '192' ? '192' : '320'
       execOptions.extractAudio = true

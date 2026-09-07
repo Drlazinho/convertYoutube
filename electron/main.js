@@ -303,6 +303,9 @@ async function processJob(jobId, url, quality, finalPath, type) {
       youtubeSkipDashManifest: true,
       noPlaylist: true,
       extractorArgs: 'youtube:player_client=android,web',
+      embedMetadata: true,
+      embedThumbnail: true,
+      convertThumbnails: 'jpg',
     };
 
     if (type === 'video') {

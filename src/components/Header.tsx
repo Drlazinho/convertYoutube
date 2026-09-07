@@ -5,9 +5,11 @@ interface HeaderProps {
   activeTab: 'converter' | 'history' | 'settings' | 'about';
   setActiveTab: (tab: 'converter' | 'history' | 'settings' | 'about') => void;
   historyCount: number;
+  activeDownloadsCount: number;
+  onToggleQueue: () => void;
 }
 
-export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
+export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsCount, onToggleQueue }: HeaderProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
 
@@ -36,8 +38,11 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#08080a]/80 border-b border-white/[0.06] transition-all">
-      <div className="max-w-6xl mx-auto px-6 h-18 flex flex-col md:flex-row items-center justify-between py-3 gap-4 md:gap-0">
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#08080a]/80 border-b border-white/[0.06] transition-all flex flex-col">
+      {/* Electron Drag Region */}
+      <div className="w-full h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as any} />
+      
+      <div className="max-w-6xl mx-auto px-6 pb-3 pt-1 w-full flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
         
         {/* Brand Logo */}
         <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => setActiveTab('converter')}>
@@ -107,6 +112,24 @@ export function Header({ activeTab, setActiveTab, historyCount }: HeaderProps) {
 
         {/* System Status & Quick Actions */}
         <div className="flex items-center gap-3">
+          <button 
+            onClick={onToggleQueue}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 text-xs font-semibold ${
+              activeDownloadsCount > 0 
+                ? 'bg-brand-500/20 border-brand-500/30 text-brand-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                : 'bg-white/[0.04] border-white/[0.06] text-neutral-400 hover:bg-white/[0.08] hover:text-white'
+            }`}
+            title="Fila de Downloads"
+          >
+            <Download className={`w-3.5 h-3.5 ${activeDownloadsCount > 0 ? 'animate-bounce' : ''}`} />
+            <span>Fila</span>
+            {activeDownloadsCount > 0 && (
+              <span className="bg-brand-500 text-white px-1.5 rounded-md text-[10px] ml-0.5 animate-pulse">
+                {activeDownloadsCount}
+              </span>
+            )}
+          </button>
+
           {isInstallable ? (
             <button
               onClick={handleInstallClick}

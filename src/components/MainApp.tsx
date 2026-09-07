@@ -8,12 +8,17 @@ import { SettingsTab } from './SettingsTab';
 import { AboutTab } from './AboutTab';
 import { useHistory } from '@/hooks/useHistory';
 import { usePlayer } from '@/hooks/usePlayer';
+import { useQueue } from '@/hooks/useQueue';
+import { QueuePopover } from './QueuePopover';
 import { Headphones, Gauge, Shield, Video, Play, Pause, SkipBack, SkipForward, Code, Briefcase, MessageCircle } from 'lucide-react';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings' | 'about'>('converter');
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  
   const historyManager = useHistory();
   const playerManager = usePlayer(historyManager.history);
+  const queueManager = useQueue();
 
   const formatTime = (timeInSeconds: number) => {
     if (isNaN(timeInSeconds)) return '0:00';
@@ -27,13 +32,22 @@ export function MainApp() {
       <Header 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        historyCount={historyManager.history.length} 
+        historyCount={historyManager.history.length}
+        activeDownloadsCount={queueManager.queue.filter(q => q.status !== 'finished' && q.status !== 'error').length}
+        onToggleQueue={() => setIsQueueOpen(!isQueueOpen)}
+      />
+      
+      <QueuePopover 
+        queue={queueManager.queue} 
+        isOpen={isQueueOpen} 
+        onClose={() => setIsQueueOpen(false)} 
+        onClear={queueManager.clearFinished} 
       />
       
       <main className="flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-16 flex flex-col">
         {/* Keep tabs mounted using CSS display so state is not lost */}
         <div style={{ display: activeTab === 'converter' ? 'block' : 'none' }}>
-          <ConverterTab historyManager={historyManager} />
+          <ConverterTab historyManager={historyManager} queueManager={queueManager} />
         </div>
         
         <div style={{ display: activeTab === 'history' ? 'block' : 'none' }}>

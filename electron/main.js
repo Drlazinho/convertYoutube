@@ -1,50 +1,51 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, session, shell } = require('electron');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
-const { join } = require('path');
-const { tmpdir } = require('os');
-const { create } = require('youtube-dl-exec');
-const crypto = require('crypto');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session, shell } = require('electron')
+const path = require('path')
+const os = require('os')
+const fs = require('fs')
+const { join } = require('path')
+const { tmpdir } = require('os')
+const { create } = require('youtube-dl-exec')
+const crypto = require('crypto')
 
-const isWin = os.platform() === 'win32';
-const ytdlpBinary = isWin ? 'yt-dlp.exe' : 'yt-dlp';
-const ffmpegBinary = isWin ? 'ffmpeg.exe' : 'ffmpeg';
+const isWin = os.platform() === 'win32'
+const ytdlpBinary = isWin ? 'yt-dlp.exe' : 'yt-dlp'
+const ffmpegBinary = isWin ? 'ffmpeg.exe' : 'ffmpeg'
 
 const ytdlpPath = app.isPackaged
   ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'youtube-dl-exec', 'bin', ytdlpBinary)
-  : path.join(__dirname, '../node_modules/youtube-dl-exec/bin', ytdlpBinary);
+  : path.join(__dirname, '../node_modules/youtube-dl-exec/bin', ytdlpBinary)
 
-const youtubedl = create(ytdlpPath);
+const youtubedl = create(ytdlpPath)
 
 const ffmpegPath = app.isPackaged
   ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', ffmpegBinary)
-  : require('ffmpeg-static');
-const serve = require('electron-serve').default || require('electron-serve');
+  : require('ffmpeg-static')
+const serve = require('electron-serve').default || require('electron-serve')
 
-const loadURL = serve({ directory: path.join(__dirname, '../out') });
+const loadURL = serve({ directory: path.join(__dirname, '../out') })
 
 // Settings management
-const configPath = path.join(app.getPath('userData'), 'config.json');
+const configPath = path.join(app.getPath('userData'), 'config.json')
 function readConfig() {
-  const defaults = { defaultDirectory: '', autoSave: false, searchLimit: 20 };
+  const defaults = { defaultDirectory: '', autoSave: false, searchLimit: 20 }
   try {
     if (fs.existsSync(configPath)) {
-      return { ...defaults, ...JSON.parse(fs.readFileSync(configPath, 'utf-8')) };
+      return { ...defaults, ...JSON.parse(fs.readFileSync(configPath, 'utf-8')) }
     }
-  } catch (e) { console.error('Error reading config', e); }
-  return defaults;
+  } catch (e) { console.error('Error reading config', e) }
+  return defaults
 }
 function writeConfig(config) {
   try {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  } catch (e) { console.error('Error writing config', e); }
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+  } catch (e) { console.error('Error writing config', e) }
 }
 
-let mainWindow;
+let mainWindow
+const activeDownloads = new Map() // jobId -> subprocess
 
 // Emulate the jobs store
-const jobs = new Map();
+const jobs = new Map()
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -56,7 +57,7 @@ function createWindow() {
     titleBarOverlay: {
       color: '#08080a',
       symbolColor: '#ffffff',
-      height: 40
+      height: 32
     },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -66,68 +67,92 @@ function createWindow() {
     },
     icon: path.join(__dirname, '../build/icon.png'),
     backgroundColor: '#08080a',
-  });
+  })
 
-  const isDev = process.env.NODE_ENV === 'development';
+  mainWindow.on('close', (e) => {
+    if (activeDownloads.size > 0) {
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'question',
+        buttons: ['Interromper e Sair', 'Aguardar'],
+        title: 'Aviso de Download',
+        message: `Você tem ${activeDownloads.size} download(s) em andamento.\n\nSe sair agora, eles serão interrompidos e perdidos. Deseja fechar o ConvertTube mesmo assim?`,
+        defaultId: 1,
+        cancelId: 1
+      })
+
+      if (choice === 1) {
+        e.preventDefault() // Wait
+      } else {
+        // Interrupt and Exit
+        for (const [id, subprocess] of activeDownloads) {
+          try {
+            subprocess.kill()
+          } catch (err) { }
+        }
+      }
+    }
+  })
+
+  const isDev = process.env.NODE_ENV === 'development'
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
+    mainWindow.loadURL('http://localhost:3000')
+    mainWindow.webContents.openDevTools()
   } else {
-    loadURL(mainWindow);
+    loadURL(mainWindow)
   }
 }
 
 app.whenReady().then(() => {
   // Register custom protocol for playing local media files safely
   protocol.registerFileProtocol('local-media', (request, callback) => {
-    const url = request.url.replace('local-media://', '');
+    const url = request.url.replace('local-media://', '')
     try {
-      return callback({ path: decodeURIComponent(url) });
+      return callback({ path: decodeURIComponent(url) })
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
-  });
+  })
 
-  createWindow();
+  createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow()
     }
-  });
-});
+  })
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    app.quit()
   }
-});
+})
 
 // IPC Handlers
 ipcMain.handle('get-settings', () => {
-  return readConfig();
-});
+  return readConfig()
+})
 
 ipcMain.handle('save-settings', (event, newConfig) => {
-  writeConfig(newConfig);
-  return { success: true };
-});
+  writeConfig(newConfig)
+  return { success: true }
+})
 
 ipcMain.handle('choose-directory', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory']
-  });
+  })
   if (!canceled && filePaths.length > 0) {
-    return filePaths[0];
+    return filePaths[0]
   }
-  return null;
-});
+  return null
+})
 
 ipcMain.handle('search-youtube', async (event, query) => {
   try {
-    const config = readConfig();
-    const limit = config.searchLimit || 20;
-    const searchUrl = `ytsearch${limit}:${query}`;
+    const config = readConfig()
+    const limit = config.searchLimit || 20
+    const searchUrl = `ytsearch${limit}:${query}`
     const info = await youtubedl(searchUrl, {
       dumpSingleJson: true,
       noWarnings: true,
@@ -137,21 +162,21 @@ ipcMain.handle('search-youtube', async (event, query) => {
       youtubeSkipDashManifest: true,
       extractorArgs: 'youtube:player_client=android,web',
       flatPlaylist: true,
-    });
+    })
 
     // yt-dlp returns an object with an 'entries' array for searches
     if (info && info.entries) {
       const results = info.entries.map(entry => {
-        const seconds = entry.duration || 0;
-        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const s = (seconds % 60).toString().padStart(2, '0');
-        let duration = `${m}:${s}`;
+        const seconds = entry.duration || 0
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+        const s = (seconds % 60).toString().padStart(2, '0')
+        let duration = `${m}:${s}`
         if (seconds >= 3600) {
-          const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-          const mm = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-          duration = `${h}:${mm}:${s}`;
+          const h = Math.floor(seconds / 3600).toString().padStart(2, '0')
+          const mm = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+          duration = `${h}:${mm}:${s}`
         }
-        
+
         return {
           id: entry.id,
           title: entry.title,
@@ -159,16 +184,16 @@ ipcMain.handle('search-youtube', async (event, query) => {
           thumbnail: (entry.thumbnails && entry.thumbnails.length > 0) ? entry.thumbnails[entry.thumbnails.length - 1].url : '',
           duration,
           url: entry.webpage_url || `https://www.youtube.com/watch?v=${entry.id}`
-        };
-      });
-      return { success: true, results };
+        }
+      })
+      return { success: true, results }
     }
-    return { success: false, error: 'Nenhum resultado encontrado.' };
+    return { success: false, error: 'Nenhum resultado encontrado.' }
   } catch (error) {
-    console.error('Error searching info:', error);
-    return { success: false, error: error.message };
+    console.error('Error searching info:', error)
+    return { success: false, error: error.message }
   }
-});
+})
 
 ipcMain.handle('get-stream-url', async (event, url) => {
   try {
@@ -181,16 +206,16 @@ ipcMain.handle('get-stream-url', async (event, url) => {
       preferFreeFormats: true,
       youtubeSkipDashManifest: true,
       extractorArgs: 'youtube:player_client=android,web'
-    });
-    
+    })
+
     // getUrl actually just returns the string directly if dumpSingleJson is not used, 
     // but youtube-dl-exec's default returns a string when returning output like -g
-    return { success: true, url: typeof info === 'string' ? info.trim() : info.url };
+    return { success: true, url: typeof info === 'string' ? info.trim() : info.url }
   } catch (error) {
-    console.error('Error fetching stream url:', error);
-    return { success: false, error: error.message };
+    console.error('Error fetching stream url:', error)
+    return { success: false, error: error.message }
   }
-});
+})
 
 ipcMain.handle('get-info', async (event, url) => {
   try {
@@ -203,16 +228,16 @@ ipcMain.handle('get-info', async (event, url) => {
       youtubeSkipDashManifest: true,
       noPlaylist: true,
       extractorArgs: 'youtube:player_client=android,web',
-    });
+    })
 
-    const seconds = info.duration;
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    let duration = `${m}:${s}`;
+    const seconds = info.duration
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+    const s = (seconds % 60).toString().padStart(2, '0')
+    let duration = `${m}:${s}`
     if (seconds >= 3600) {
-      const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-      const mm = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-      duration = `${h}:${mm}:${s}`;
+      const h = Math.floor(seconds / 3600).toString().padStart(2, '0')
+      const mm = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+      duration = `${h}:${mm}:${s}`
     }
 
     return {
@@ -224,12 +249,12 @@ ipcMain.handle('get-info', async (event, url) => {
         thumbnail: info.thumbnail,
         duration,
       }
-    };
+    }
   } catch (error) {
-    console.error('Error fetching info:', error);
-    return { success: false, error: error.message };
+    console.error('Error fetching info:', error)
+    return { success: false, error: error.message }
   }
-});
+})
 
 ipcMain.handle('open-preview-window', (event, url) => {
   const previewWin = new BrowserWindow({
@@ -242,56 +267,56 @@ ipcMain.handle('open-preview-window', (event, url) => {
       nodeIntegration: false,
       contextIsolation: true
     }
-  });
-  previewWin.loadURL(url);
-  return { success: true };
-});
+  })
+  previewWin.loadURL(url)
+  return { success: true }
+})
 
 ipcMain.handle('show-in-folder', async (event, filePath) => {
   if (fs.existsSync(filePath)) {
-    shell.showItemInFolder(filePath);
-    return { success: true };
+    shell.showItemInFolder(filePath)
+    return { success: true }
   }
-  return { success: false, error: 'Arquivo não encontrado' };
-});
+  return { success: false, error: 'Arquivo não encontrado' }
+})
 
 ipcMain.handle('start-conversion', async (event, { url, quality, title, type = 'audio' }) => {
-  const jobId = crypto.randomUUID();
-  const safeTitle = (title || 'youtube_download').replace(/[<>:"\/\\|?*\x00-\x1F]/g, '').trim();
-  
-  const isVideo = type === 'video';
-  const ext = isVideo ? 'mp4' : 'mp3';
-  const config = readConfig();
-  let finalPath = '';
-  
+  const jobId = crypto.randomUUID()
+  const safeTitle = (title || 'youtube_download').replace(/[<>:"\/\\|?*\x00-\x1F]/g, '').trim()
+
+  const isVideo = type === 'video'
+  const ext = isVideo ? 'mp4' : 'mp3'
+  const config = readConfig()
+  let finalPath = ''
+
   if (config.autoSave && config.defaultDirectory) {
-    finalPath = path.join(config.defaultDirectory, `${safeTitle}.${ext}`);
+    finalPath = path.join(config.defaultDirectory, `${safeTitle}.${ext}`)
   } else {
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: isVideo ? 'Salvar Vídeo' : 'Salvar Áudio',
       defaultPath: path.join(config.defaultDirectory || app.getPath('downloads'), `${safeTitle}.${ext}`),
       filters: isVideo ? [{ name: 'Vídeo MP4', extensions: ['mp4'] }] : [{ name: 'Áudio MP3', extensions: ['mp3'] }]
-    });
+    })
 
     if (canceled || !filePath) {
-      return { success: false, error: 'Download cancelado pelo usuário.' };
+      return { success: false, error: 'Download cancelado pelo usuário.' }
     }
-    finalPath = filePath;
+    finalPath = filePath
   }
 
   processJob(jobId, url, quality, finalPath, type).catch(err => {
-    console.error('Job background error:', err);
-    mainWindow.webContents.send(`progress-${jobId}`, { status: 'error', error: err.message });
-  });
+    console.error('Job background error:', err)
+    mainWindow.webContents.send(`progress-${jobId}`, { status: 'error', error: err.message })
+  })
 
-  return { success: true, jobId };
-});
+  return { success: true, jobId }
+})
 
 async function processJob(jobId, url, quality, finalPath, type) {
   try {
-    mainWindow.webContents.send(`progress-${jobId}`, { status: 'starting' });
+    mainWindow.webContents.send(`progress-${jobId}`, { status: 'starting' })
 
-    mainWindow.webContents.send(`progress-${jobId}`, { status: 'downloading', percent: 0 });
+    mainWindow.webContents.send(`progress-${jobId}`, { status: 'downloading', percent: 0 })
 
     let execOptions = {
       output: finalPath,
@@ -306,53 +331,56 @@ async function processJob(jobId, url, quality, finalPath, type) {
       embedMetadata: true,
       embedThumbnail: true,
       convertThumbnails: 'jpg',
-    };
-
-    if (type === 'video') {
-      const res = quality || '1080';
-      execOptions.format = `bestvideo[height<=${res}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`;
-      execOptions.mergeOutputFormat = 'mp4';
-    } else {
-      const bitrate = quality === '192' ? '192' : '320';
-      execOptions.extractAudio = true;
-      execOptions.audioFormat = 'mp3';
-      execOptions.audioQuality = bitrate === '320' ? 0 : 5;
     }
 
-    const subprocess = youtubedl.exec(url, execOptions);
+    if (type === 'video') {
+      const res = quality || '1080'
+      execOptions.format = `bestvideo[height<=${res}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`
+      execOptions.mergeOutputFormat = 'mp4'
+    } else {
+      const bitrate = quality === '192' ? '192' : '320'
+      execOptions.extractAudio = true
+      execOptions.audioFormat = 'mp3'
+      execOptions.audioQuality = bitrate === '320' ? 0 : 5
+    }
+
+    const subprocess = youtubedl.exec(url, execOptions)
+    activeDownloads.set(jobId, subprocess)
 
     if (subprocess.stdout) {
       subprocess.stdout.on('data', (data) => {
-        const text = data.toString();
-        const match = text.match(/\[download\]\s+([\d\.]+)\%\s+of\s+~?([\d\.\w]+)\s+at\s+([\d\.\w\/]+)\s+ETA\s+([\d:]+)/);
+        const text = data.toString()
+        const match = text.match(/\[download\]\s+([\d\.]+)\%\s+of\s+~?([\d\.\w]+)\s+at\s+([\d\.\w\/]+)\s+ETA\s+([\d:]+)/)
         if (match) {
-          const [, percent, size, speed, eta] = match;
+          const [, percent, size, speed, eta] = match
           mainWindow.webContents.send(`progress-${jobId}`, {
             status: 'downloading',
             percent: parseFloat(percent),
             totalSize: size,
             speed,
             eta
-          });
+          })
         } else if (text.includes('Extracting audio') || text.includes('Destination:') && text.includes('.mp3')) {
           mainWindow.webContents.send(`progress-${jobId}`, {
             status: 'processing',
             percent: 100
-          });
+          })
         }
-      });
+      })
     }
 
-    await subprocess;
+    await subprocess
 
     mainWindow.webContents.send(`progress-${jobId}`, {
       status: 'done',
       percent: 100,
       filePath: finalPath
-    });
+    })
 
   } catch (error) {
-    console.error('Process Job Error:', error);
-    mainWindow.webContents.send(`progress-${jobId}`, { status: 'error', error: error.message || 'Erro na conversão' });
+    console.error('Process Job Error:', error)
+    mainWindow.webContents.send(`progress-${jobId}`, { status: 'error', error: error.message || 'Erro na conversão' })
+  } finally {
+    activeDownloads.delete(jobId)
   }
 }

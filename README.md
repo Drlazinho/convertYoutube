@@ -27,6 +27,8 @@ O **ConvertTube** é uma aplicação moderna, disponível tanto para Web como De
 ### Principais Funcionalidades
 
 - **Busca Integrada Ultrarrápida:** Pesquise músicas e artistas diretamente na barra de pesquisa. A busca utiliza leitura plana (flat-playlist) para retornar dezenas de resultados em segundos, com sistema inteligente de paginação local para evitar latência.
+- **Gerenciador de Fila Simultâneo:** Adicione múltiplos downloads ao mesmo tempo sem travar a interface. Uma gaveta flutuante monitora o progresso (velocidade e ETA) de cada arquivo isoladamente, com proteção contra fechamento acidental da janela.
+- **Metadados e Capas Nativas (ID3 Tags):** O aplicativo embute automaticamente informações do YouTube e converte a thumbnail original em capa de álbum (JPG) nativamente no arquivo, exibindo-a em qualquer media player e dispositivo automotivo.
 - **Download de Vídeos em Alta Definição:** Suporte completo para baixar vídeos do YouTube em 1080p (Full HD), 720p, 480p e 360p com mesclagem de áudio e vídeo sem perdas usando FFmpeg.
 - **Player Global & Preview Nativo:** Ouça prévias das músicas diretamente antes de baixar. O player flutuante acompanha você por todas as abas, permitindo ouvir seu histórico de downloads como no Spotify (com controles completos).
 - **Gerenciador de Downloads Inteligente:** A aba de Histórico agora é separada por categorias (Músicas e Vídeos). O app permite abrir diretamente a pasta onde o arquivo foi salvo e rastreia inteligentemente se ele foi movido, permitindo refazer o download com 1 clique se necessário.

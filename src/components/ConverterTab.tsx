@@ -2,21 +2,20 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Download, Loader2, Link as LinkIcon, Sparkles, Music, Play, Search, Clock, ChevronDown, X } from 'lucide-react'
 import { useHistory } from '@/hooks/useHistory'
 
-export function ConverterTab({ historyManager }: { historyManager: ReturnType<typeof useHistory> }) {
+export function ConverterTab({ historyManager, queueManager }: { historyManager: ReturnType<typeof useHistory>, queueManager: any }) {
   const [query, setQuery] = useState('')
   const [mediaType, setMediaType] = useState<'audio' | 'video'>('audio')
   const [quality, setQuality] = useState('mp3-320')
-  const [status, setStatus] = useState<{ type: 'idle' | 'starting' | 'downloading' | 'processing' | 'success' | 'error', message: string }>({ type: 'idle', message: '' })
   const [preview, setPreview] = useState<any>(null)
   const [streamUrl, setStreamUrl] = useState<string | null>(null)
   const [streamLoading, setStreamLoading] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [progress, setProgress] = useState<any>({});
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [errorStatus, setErrorStatus] = useState<string | null>(null)
 
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
@@ -36,8 +35,9 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
   }, [])
 
   const saveSearchHistory = (term: string) => {
-    if (!term || term.startsWith('http')) return
-    const newHistory = [term, ...searchHistory.filter(t => t !== term)].slice(0, 5)
+    const trimmed = term.trim()
+    if (!trimmed) return
+    const newHistory = [trimmed, ...searchHistory.filter(t => t !== trimmed)].slice(0, 10)
     setSearchHistory(newHistory)
     localStorage.setItem('yt-search-history', JSON.stringify(newHistory))
   }
@@ -51,71 +51,38 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
 
   const handleSearch = async (searchTerm: string = query) => {
     if (!searchTerm) return
+
+    setQuery(searchTerm)
     setShowHistory(false)
+    setLoading(true)
+    setErrorStatus(null)
 
     if (searchTerm.includes('youtube.com') || searchTerm.includes('youtu.be')) {
-      setLoading(true)
-      try {
-        const data = await (window as any).electron.getInfo(searchTerm)
-        if (data.success) {
-          setPreview(data.info)
-          setStreamUrl(null)
-          setSearchResults([])
-          setStatus({ type: 'idle', message: '' })
-        } else {
-          setPreview(null)
-          setStatus({ type: 'error', message: data.error || 'Vídeo não encontrado ou link inválido.' })
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
+      const data = await (window as any).electron.getInfo(searchTerm)
+      if (data.success) {
+        setPreview(data.info)
+        setSearchResults([])
+        saveSearchHistory(searchTerm)
+      } else {
+        setErrorStatus(data.error || 'Erro ao buscar.')
       }
     } else {
-      setLoading(true)
-      setPreview(null)
-      setStreamUrl(null)
-      try {
-        const data = await (window as any).electron.searchYoutube(searchTerm)
-        if (data.success) {
-          setSearchResults(data.results)
-          setCurrentPage(1)
-          saveSearchHistory(searchTerm)
-        } else {
-          setStatus({ type: 'error', message: data.error || 'Erro ao buscar.' })
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
-      }
-    }
-  }
-
-  const loadStream = async (videoInfo: any) => {
-    setPreview(videoInfo)
-    setStreamUrl(null)
-    setStreamLoading(true)
-    try {
-      const urlToFetch = videoInfo.url || `https://www.youtube.com/watch?v=${videoInfo.id}`
-      const res = await (window as any).electron.getStreamUrl(urlToFetch)
-      if (res.success && res.url) {
-        setStreamUrl(res.url)
+      const data = await (window as any).electron.searchYoutube(searchTerm)
+      if (data.success) {
+        setSearchResults(data.results)
+        setCurrentPage(1)
+        saveSearchHistory(searchTerm)
       } else {
-        setStatus({ type: 'error', message: 'Não foi possível carregar a prévia do áudio direto.' })
+        setErrorStatus(data.error || 'Erro ao buscar.')
       }
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setStreamLoading(false)
     }
+    setLoading(false)
   }
 
   const handleDownload = async (videoInfo: any) => {
     if (!videoInfo || (!videoInfo.url && !videoInfo.id)) return
 
-    setStatus({ type: 'starting', message: 'Preparando conversão...' })
-    setProgress({})
+    setErrorStatus(null)
     setPreview(videoInfo)
 
     try {
@@ -131,42 +98,35 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       }
 
       const { jobId } = response
+      queueManager.addJob(jobId, videoInfo)
 
       const cleanup = (window as any).electron.onProgress(jobId, (data: any) => {
+        queueManager.updateJob(jobId, data)
+
         if (data.status === 'error') {
-          setStatus({ type: 'error', message: data.error || 'Erro durante o processamento' })
           cleanup()
           return
         }
 
-        setProgress(data)
-
-        if (data.status === 'starting') {
-          setStatus({ type: 'starting', message: 'Conectando ao YouTube...' })
-        } else if (data.status === 'downloading') {
-          setStatus({ type: 'downloading', message: mediaType === 'video' ? `Baixando vídeo e áudio...` : `Extraindo áudio de alta fidelidade...` })
-        } else if (data.status === 'processing') {
-          setStatus({ type: 'processing', message: 'Convertendo para formato final...' })
-        } else if (data.status === 'done') {
-          setStatus({ type: 'success', message: 'Conversão concluída! Salvo com sucesso.' })
-          cleanup()
-
+        if (data.status === 'done') {
           historyManager.addToHistory({
             id: videoInfo.id,
             title: videoInfo.title,
             thumbnail: videoInfo.thumbnail,
             url: videoInfo.url || `https://youtube.com/watch?v=${videoInfo.id}`,
             timestamp: Date.now(),
-            format: mediaType === 'video' ? `MP4 ${quality}p` : `MP3 ${quality.includes('320') ? '320' : '192'}kbps`,
-            duration: videoInfo.duration,
-            filePath: data.filePath,
+            format: mediaType === 'video' ? `${quality}p` : (quality.includes('320') ? '320kbps' : '192kbps'),
             mediaType: mediaType
           })
+          queueManager.updateJob(jobId, { status: 'finished', percent: 100 })
+          cleanup()
         }
       })
     } catch (err: any) {
       console.error(err)
-      setStatus({ type: 'error', message: err.message || 'Falha ao iniciar conversão' })
+      if (err.message !== 'Download cancelado pelo usuário.') {
+        setErrorStatus(err.message)
+      }
     }
   }
 
@@ -301,48 +261,10 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
       </div>
 
       {/* Error Message */}
-      {status.type === 'error' && (
+      {errorStatus && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
           <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-          {status.message}
-        </div>
-      )}
-
-      {/* Progress View */}
-      {(status.type === 'starting' || status.type === 'downloading' || status.type === 'processing') && (
-        <div className="bg-[#15161C] border border-brand-500/30 rounded-xl p-6 shadow-xl animate-in fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-white flex items-center gap-2 text-sm">
-              <Loader2 className="w-4 h-4 text-brand-500 animate-spin" />
-              {status.message}
-            </h3>
-            {progress.percent !== undefined && (
-              <span className="text-brand-400 font-mono font-bold text-sm">{progress.percent.toFixed(1)}%</span>
-            )}
-          </div>
-
-          <div className="w-full bg-black/40 rounded-full h-2.5 mb-3 overflow-hidden border border-white/[0.05]">
-            <div
-              className="bg-gradient-to-r from-brand-600 to-brand-400 h-2.5 rounded-full transition-all duration-300 ease-out relative"
-              style={{ width: `${progress.percent || (status.type === 'starting' ? 5 : 100)}%` }}
-            >
-              <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1s_infinite] -skew-x-12"></div>
-            </div>
-          </div>
-
-          <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
-            <span>{progress.totalSize ? `Tamanho: ${progress.totalSize}` : 'Calculando...'}</span>
-            <span>{progress.speed ? `Velocidade: ${progress.speed}` : ''}</span>
-            <span>{progress.eta ? `Tempo restante: ${progress.eta}` : ''}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Success Message */}
-      {status.type === 'success' && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-          <Sparkles className="w-4 h-4" />
-          {status.message}
+          {errorStatus}
         </div>
       )}
 
@@ -455,8 +377,7 @@ export function ConverterTab({ historyManager }: { historyManager: ReturnType<ty
 
             <button
               onClick={() => handleDownload({ ...preview, url: preview.url || `https://youtube.com/watch?v=${preview.id}` })}
-              disabled={status.type === 'starting' || status.type === 'downloading' || status.type === 'processing'}
-              className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto mt-auto"
+              className="bg-brand-600 hover:bg-brand-500 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 w-full md:w-auto mt-auto"
             >
               <Download className="w-4 h-4" />
               Iniciar Conversão ({mediaType === 'video' ? `${quality}p` : quality.includes('320') ? '320kbps' : '192kbps'})

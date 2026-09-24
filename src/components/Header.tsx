@@ -48,9 +48,11 @@ export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsC
         
         {/* Brand Logo */}
         <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => setActiveTab('converter')}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-500 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-200">
-            <Video className="w-5 h-5 text-white stroke-[2.2]" />
-          </div>
+          <img 
+            src="./icon-192x192.png" 
+            alt="ConvertTube Logo" 
+            className="w-9 h-9 rounded-xl shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-200 object-cover"
+          />
           <div className="flex items-baseline">
             <span className="text-xl font-extrabold tracking-tight text-white">
               Convert<span className="text-brand-500">Tube</span>

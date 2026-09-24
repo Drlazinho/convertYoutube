@@ -104,9 +104,11 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
       <div className="w-full max-w-md bg-[#15161C] border border-white/[0.08] p-8 md:p-10 rounded-3xl shadow-2xl relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
         
         <div className="flex flex-col items-center justify-center mb-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-rose-500 flex items-center justify-center shadow-lg shadow-brand-500/20 mb-4">
-            <Video className="w-8 h-8 text-white stroke-[2.2]" />
-          </div>
+          <img 
+            src="./icon-512x512.png" 
+            alt="ConvertTube Logo" 
+            className="w-16 h-16 rounded-2xl shadow-lg shadow-brand-500/20 mb-4 object-cover"
+          />
           <h1 className="text-3xl font-extrabold text-white tracking-tight">ConvertTube</h1>
           <p className="text-neutral-400 mt-2 text-sm text-center">
             {isLogin ? 'Faça login para continuar sincronizando seus downloads.' : 'Crie sua conta para rastrear suas mídias convertidas.'}

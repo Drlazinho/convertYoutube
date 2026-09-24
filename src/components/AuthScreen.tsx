@@ -53,21 +53,21 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
   };
 
   const handleOAuth = async (provider: 'google' | 'github') => {
-    setError('No modo Desktop (Electron), a autenticação via OAuth exige configuração de Deep Linking que pode não estar ativa. Tente E-mail e Senha por enquanto.');
-    // TODO: Implement Electron-compatible OAuth if configured
-    /*
+    setError(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: 'http://localhost:3000',
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       });
       if (error) throw error;
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Erro ao conectar com ' + provider);
     }
-    */
   };
 
   return (

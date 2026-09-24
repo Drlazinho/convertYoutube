@@ -36,8 +36,10 @@ O **ConvertTube** é uma aplicação moderna, disponível tanto para Web como De
 - **Controle Total nas Configurações:** Aba dedicada para escolher pastas padrão de download, ativar auto-save, e controlar livremente o número de resultados de busca retornados (de 10 a 100) com indicador interativo de impacto na latência.
 - **Qualidade Máxima de Áudio:** Extração e conversão de áudios masterizados com taxa de *320 kbps* e amostragem em *48 kHz*, garantindo que não há compressão secundária.
 - **Conversão Instantânea:** Desenhado para realizar processos de extração rápidos e assíncronos.
-- **Privacidade Garantida:** Todo o seu histórico de downloads fica guardado de forma segura e estritamente local no seu dispositivo. Nenhum dado é rastreado ou guardado na nuvem.
-- **Multiplataforma:** Experiência consistente no Browser ou nativamente através da aplicação Desktop empacotada.
+- **Autenticação Segura (Supabase):** Sistema de login robusto que impede acessos não autorizados. Os usuários podem criar contas por e-mail ou usar provedores OAuth (Google, GitHub). A sessão é mantida com tokens de longa duração.
+- **Painel Administrativo (Dashboard):** Um ambiente invisível para usuários comuns. Quando o e-mail de administração (`lazbonfim1@gmail.com`) é conectado, uma aba analítica é desbloqueada exibindo métricas de crescimento, usuários únicos e um registro completo de downloads.
+- **Rastreamento de Métricas Invisível:** Uma arquitetura silenciosa em background que, ao finalizar cada download, grava estritamente dados da mídia (título, qualidade, formato) sem interferir na performance do aplicativo.
+- **Instalador Profissional NSIS:** O aplicativo gera um executável avançado estilo "Assistente", incluindo Termos de Uso (Licença), seleção de pasta de instalação (Per-User/Per-Machine) e criação automática de atalhos.
 - **Interface Elegante:** Uma UI fluida, responsiva, com *dark mode* e transições suaves focadas na experiência do utilizador.
 
 ---
@@ -46,6 +48,8 @@ O **ConvertTube** é uma aplicação moderna, disponível tanto para Web como De
 
 O projeto foi construído utilizando as ferramentas mais modernas do ecossistema JavaScript/TypeScript:
 
+- **[Supabase](https://supabase.com/):** Backend-as-a-Service (BaaS) Open Source utilizado para autenticação e como banco de dados PostgreSQL para as métricas do Dashboard. Escolhido pela alta segurança com Row Level Security (RLS).
+- **[NSIS via electron-builder](https://www.electron.build/):** Motor utilizado para a compilação do `.exe` final, proporcionando uma experiência de instalação clássica e altamente profissional para ambientes Windows.
 - **[Next.js (v16)](https://nextjs.org/) & [React (v19)](https://react.dev/):** Escolhidos pela renderização rápida, roteamento moderno (App Router) e facilidade na construção de interfaces de alto desempenho.
 - **[Electron](https://www.electronjs.org/):** Framework utilizado para empacotar a aplicação web num software desktop nativo, proporcionando acesso direto ao sistema de ficheiros do utilizador para os downloads.
 - **[Tailwind CSS (v4)](https://tailwindcss.com/):** Framework de estilos utilitários que permite construir uma interface de utilizador esteticamente agradável e responsiva com um esforço de desenvolvimento reduzido.

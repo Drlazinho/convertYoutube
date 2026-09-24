@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Video, RefreshCw, History, HelpCircle, Settings, Info } from 'lucide-react';
+import { Download, Video, RefreshCw, History, HelpCircle, Settings, Info, BarChart3, LogOut } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface HeaderProps {
-  activeTab: 'converter' | 'history' | 'settings' | 'about';
-  setActiveTab: (tab: 'converter' | 'history' | 'settings' | 'about') => void;
+  activeTab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard';
+  setActiveTab: (tab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard') => void;
   historyCount: number;
   activeDownloadsCount: number;
   onToggleQueue: () => void;
+  isAdmin: boolean;
 }
 
-export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsCount, onToggleQueue }: HeaderProps) {
+export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsCount, onToggleQueue, isAdmin }: HeaderProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
 
@@ -108,10 +110,32 @@ export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsC
             <Info className="w-3.5 h-3.5" />
             Sobre
           </button>
+
+          {isAdmin && (
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                activeTab === 'dashboard' 
+                  ? 'font-semibold bg-brand-500/20 text-brand-400 shadow-sm' 
+                  : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Admin
+            </button>
+          )}
         </nav>
 
         {/* System Status & Quick Actions */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08] hover:text-white transition-all duration-300 text-xs font-semibold"
+            title="Sair"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Sair</span>
+          </button>
           <button 
             onClick={onToggleQueue}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 text-xs font-semibold ${

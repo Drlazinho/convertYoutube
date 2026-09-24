@@ -118,8 +118,17 @@ export function ConverterTab({ historyManager, queueManager }: { historyManager:
             format: mediaType === 'video' ? `${quality}p` : (quality.includes('320') ? '320kbps' : '192kbps'),
             mediaType: mediaType
           })
+          
           queueManager.updateJob(jobId, { status: 'finished', percent: 100 })
           cleanup()
+
+          import('@/lib/supabase').then(({ trackDownload }) => {
+            trackDownload(
+              mediaType, 
+              mediaType === 'video' ? `${quality}p` : (quality.includes('320') ? '320kbps' : '192kbps'),
+              videoInfo.title
+            );
+          });
         }
       })
     } catch (err: any) {

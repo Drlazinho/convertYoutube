@@ -10,12 +10,33 @@ import { useHistory } from '@/hooks/useHistory';
 import { usePlayer } from '@/hooks/usePlayer';
 import { useQueue } from '@/hooks/useQueue';
 import { QueuePopover } from './QueuePopover';
-import { Headphones, Gauge, Shield, Video, Play, Pause, SkipBack, SkipForward, Code, Briefcase, MessageCircle } from 'lucide-react';
+import { Headphones, Gauge, Shield, Video, Play, Pause, SkipBack, SkipForward, Code, Briefcase, MessageCircle, Loader2 } from 'lucide-react';
+import { AuthScreen } from './AuthScreen';
+import { supabase } from '@/lib/supabase';
+
+import { DashboardTab } from './DashboardTab';
 
 export function MainApp() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings' | 'about'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'history' | 'settings' | 'about' | 'dashboard'>('converter');
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const historyManager = useHistory();
   const playerManager = usePlayer(historyManager.history);
   const queueManager = useQueue();
@@ -27,6 +48,18 @@ export function MainApp() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen onLogin={() => {}} />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen relative pb-24">
       <Header 
@@ -35,6 +68,7 @@ export function MainApp() {
         historyCount={historyManager.history.length}
         activeDownloadsCount={queueManager.queue.filter(q => q.status !== 'finished' && q.status !== 'error').length}
         onToggleQueue={() => setIsQueueOpen(!isQueueOpen)}
+        isAdmin={session?.user?.email === 'lazbonfim1@gmail.com'}
       />
       
       <QueuePopover 
@@ -60,6 +94,10 @@ export function MainApp() {
 
         <div style={{ display: activeTab === 'about' ? 'block' : 'none' }}>
           <AboutTab />
+        </div>
+        
+        <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
+          <DashboardTab />
         </div>
         
         {/* Value Propositions Section */}

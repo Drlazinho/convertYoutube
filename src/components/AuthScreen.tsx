@@ -52,19 +52,44 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
     }
   };
 
+  React.useEffect(() => {
+    // Escuta o Deep Link voltando do Electron main.js
+    if (typeof window !== 'undefined' && (window as any).electron) {
+      (window as any).electron.onAuthCallback(async (url: string) => {
+        try {
+          if (url.includes('#')) {
+            const params = new URLSearchParams(url.split('#')[1]);
+            const access_token = params.get('access_token');
+            const refresh_token = params.get('refresh_token');
+            if (access_token && refresh_token) {
+              await supabase.auth.setSession({ access_token, refresh_token });
+              onLogin();
+            }
+          }
+        } catch (err: any) {
+          setError('Falha ao processar login externo.');
+        }
+      });
+    }
+  }, [onLogin]);
+
   const handleOAuth = async (provider: 'google' | 'github') => {
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: 'http://localhost:3000',
+          skipBrowserRedirect: true,
+          redirectTo: 'converttube://auth-callback',
           queryParams: {
             prompt: 'select_account'
           }
         }
       });
       if (error) throw error;
+      if (data?.url && typeof window !== 'undefined' && (window as any).electron) {
+        (window as any).electron.openExternal(data.url);
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao conectar com ' + provider);
     }

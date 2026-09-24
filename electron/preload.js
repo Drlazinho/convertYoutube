@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electron', {
   saveSettings: (config) => ipcRenderer.invoke('save-settings', config),
   chooseDirectory: () => ipcRenderer.invoke('choose-directory'),
 
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  onAuthCallback: (callback) => ipcRenderer.on('auth-callback', (event, url) => callback(url)),
+
   onProgress: (jobId, callback) => {
     const channel = `progress-${jobId}`;
     const listener = (event, data) => callback(data);

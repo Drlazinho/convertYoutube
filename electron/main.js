@@ -44,6 +44,30 @@ function writeConfig(config) {
 let mainWindow
 const activeDownloads = new Map() // jobId -> subprocess
 
+// Deep Link Protocol Registration
+const PROTOCOL = 'converttube';
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])])
+  }
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL)
+}
+
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+      const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`))
+      if (url) mainWindow.webContents.send('auth-callback', url)
+    }
+  })
+}
+
 // Emulate the jobs store
 const jobs = new Map()
 
@@ -102,7 +126,20 @@ function createWindow() {
   }
 }
 
+app.on('open-url', (event, url) => {
+  if (url.startsWith(`${PROTOCOL}://`)) {
+    event.preventDefault();
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      mainWindow.webContents.send('auth-callback', url);
+    }
+  }
+});
+
 app.whenReady().then(() => {
+  ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
+  
   // Register custom protocol for playing local media files safely
   protocol.registerFileProtocol('local-media', (request, callback) => {
     const url = request.url.replace('local-media://', '')

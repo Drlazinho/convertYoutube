@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol, session, shell } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const os = require('os')
 const fs = require('fs')
@@ -139,6 +140,47 @@ app.on('open-url', (event, url) => {
 
 app.whenReady().then(() => {
   ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
+
+  // Auto-Updater Configuration
+  autoUpdater.autoDownload = false;
+  
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdates();
+  }
+
+  autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Atualização Disponível',
+      message: `A versão ${info.version} do ConvertTube está disponível. Deseja baixar agora?`,
+      buttons: ['Baixar Atualização', 'Lembrar Mais Tarde'],
+      defaultId: 0,
+      cancelId: 1
+    }).then(result => {
+      if (result.response === 0) {
+        autoUpdater.downloadUpdate();
+      }
+    });
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Atualização Pronta',
+      message: 'A atualização foi baixada com sucesso. Deseja reiniciar o aplicativo para aplicar as mudanças agora?',
+      buttons: ['Reiniciar Agora', 'Mais Tarde'],
+      defaultId: 0,
+      cancelId: 1
+    }).then(result => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('Erro na atualização:', err);
+  });
   
   // Register custom protocol for playing local media files safely
   protocol.registerFileProtocol('local-media', (request, callback) => {

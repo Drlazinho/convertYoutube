@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Download, Video, RefreshCw, History, HelpCircle, Settings, Info, BarChart3, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import packageJson from '../../package.json';
 
 interface HeaderProps {
   activeTab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard';
@@ -167,7 +168,7 @@ export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsC
           ) : (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>v1.0</span>
+              <span>v{packageJson.version}</span>
             </div>
           )}
         </div>

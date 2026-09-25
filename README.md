@@ -40,6 +40,7 @@ O **ConvertTube** é uma aplicação moderna, disponível tanto para Web como De
 - **Painel Administrativo (Dashboard):** Um ambiente invisível para usuários comuns. Quando o e-mail de administração (`lazbonfim1@gmail.com`) é conectado, uma aba analítica é desbloqueada exibindo métricas de crescimento, usuários únicos e um registro completo de downloads.
 - **Rastreamento de Métricas Invisível:** Uma arquitetura silenciosa em background que, ao finalizar cada download, grava estritamente dados da mídia (título, qualidade, formato) sem interferir na performance do aplicativo.
 - **Instalador Profissional NSIS:** O aplicativo gera um executável avançado estilo "Assistente", incluindo Termos de Uso (Licença), seleção de pasta de instalação (Per-User/Per-Machine) e criação automática de atalhos.
+- **Auto-Updater Inteligente:** Sistema integrado de atualizações automáticas silenciosas via GitHub Releases. O aplicativo notifica os usuários sobre novas versões, permite decidir o momento da instalação e aplica o patch nativamente ao reiniciar.
 - **Interface Elegante:** Uma UI fluida, responsiva, com *dark mode* e transições suaves focadas na experiência do utilizador.
 
 ---

@@ -1,57 +1,57 @@
-import React, { useEffect, useState } from 'react';
-import { Download, Video, RefreshCw, History, HelpCircle, Settings, Info, BarChart3, LogOut } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import packageJson from '../../package.json';
+import React, { useEffect, useState } from 'react'
+import { Download, Video, RefreshCw, History, HelpCircle, Settings, Info, BarChart3, LogOut } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import packageJson from '../../package.json'
 
 interface HeaderProps {
-  activeTab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard';
-  setActiveTab: (tab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard') => void;
-  historyCount: number;
-  activeDownloadsCount: number;
-  onToggleQueue: () => void;
-  isAdmin: boolean;
+  activeTab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard'
+  setActiveTab: (tab: 'converter' | 'history' | 'settings' | 'about' | 'dashboard') => void
+  historyCount: number
+  activeDownloadsCount: number
+  onToggleQueue: () => void
+  isAdmin: boolean
 }
 
 export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsCount, onToggleQueue, isAdmin }: HeaderProps) {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isInstallable, setIsInstallable] = useState(false)
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+    }
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    }
+  }, [])
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
     if (outcome === 'accepted') {
-      setIsInstallable(false);
+      setIsInstallable(false)
     }
-    setDeferredPrompt(null);
-  };
+    setDeferredPrompt(null)
+  }
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#08080a]/80 border-b border-white/[0.06] transition-all flex flex-col">
       {/* Electron Drag Region */}
       <div className="w-full h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as any} />
-      
+
       <div className="max-w-6xl mx-auto px-6 pb-3 pt-1 w-full flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-        
+
         {/* Brand Logo */}
         <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => setActiveTab('converter')}>
-          <img 
-            src="./icon-192x192.png" 
-            alt="ConvertTube Logo" 
+          <img
+            src="./icon-192x192.png"
+            alt="ConvertTube Logo"
             className="w-9 h-9 rounded-xl shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-200 object-cover"
           />
           <div className="flex items-baseline">
@@ -63,65 +63,60 @@ export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsC
 
         {/* Global Navigation */}
         <nav className="flex items-center p-1 bg-black/40 rounded-full border border-white/[0.04] shadow-inner max-w-full overflow-x-auto no-scrollbar">
-          <button 
+          <button
             onClick={() => setActiveTab('converter')}
-            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
-              activeTab === 'converter' 
-                ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
-                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
-            }`}
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${activeTab === 'converter'
+              ? 'font-semibold bg-white/[0.12] text-white shadow-sm'
+              : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+              }`}
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Converter
           </button>
-          
-          <button 
+
+          <button
             onClick={() => setActiveTab('history')}
-            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
-              activeTab === 'history' 
-                ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
-                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
-            }`}
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${activeTab === 'history'
+              ? 'font-semibold bg-white/[0.12] text-white shadow-sm'
+              : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+              }`}
           >
             <History className="w-3.5 h-3.5" />
-            Histórico 
+            Histórico
             <span className="bg-white/[0.08] px-1.5 py-0.5 rounded-md text-[10px] text-neutral-300 font-bold ml-0.5">
               {historyCount}
             </span>
           </button>
-          
-          <button 
+
+          <button
             onClick={() => setActiveTab('settings')}
-            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
-              activeTab === 'settings' 
-                ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
-                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
-            }`}
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${activeTab === 'settings'
+              ? 'font-semibold bg-white/[0.12] text-white shadow-sm'
+              : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+              }`}
           >
             <Settings className="w-3.5 h-3.5" />
             Configurações
           </button>
 
-          <button 
+          <button
             onClick={() => setActiveTab('about')}
-            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
-              activeTab === 'about' 
-                ? 'font-semibold bg-white/[0.12] text-white shadow-sm' 
-                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
-            }`}
+            className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${activeTab === 'about'
+              ? 'font-semibold bg-white/[0.12] text-white shadow-sm'
+              : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+              }`}
           >
             <Info className="w-3.5 h-3.5" />
             Sobre
           </button>
 
           {isAdmin && (
-            <button 
+            <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                activeTab === 'dashboard' 
-                  ? 'font-semibold bg-brand-500/20 text-brand-400 shadow-sm' 
-                  : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
-              }`}
+              className={`flex-none px-5 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 ${activeTab === 'dashboard'
+                ? 'font-semibold bg-brand-500/20 text-brand-400 shadow-sm'
+                : 'font-medium text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+                }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
               Admin
@@ -139,13 +134,12 @@ export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsC
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Sair</span>
           </button>
-          <button 
+          <button
             onClick={onToggleQueue}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 text-xs font-semibold ${
-              activeDownloadsCount > 0 
-                ? 'bg-brand-500/20 border-brand-500/30 text-brand-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-                : 'bg-white/[0.04] border-white/[0.06] text-neutral-400 hover:bg-white/[0.08] hover:text-white'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 text-xs font-semibold ${activeDownloadsCount > 0
+              ? 'bg-brand-500/20 border-brand-500/30 text-brand-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+              : 'bg-white/[0.04] border-white/[0.06] text-neutral-400 hover:bg-white/[0.08] hover:text-white'
+              }`}
             title="Fila de Downloads"
           >
             <Download className={`w-3.5 h-3.5 ${activeDownloadsCount > 0 ? 'animate-bounce' : ''}`} />
@@ -172,8 +166,8 @@ export function Header({ activeTab, setActiveTab, historyCount, activeDownloadsC
             </div>
           )}
         </div>
-        
+
       </div>
     </header>
-  );
+  )
 }
